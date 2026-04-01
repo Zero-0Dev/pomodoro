@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pomodoro</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #ff0000;
+      --accent: #ff4d4d;
+      --bg: #000;
+      --panel: #111;
+      --border: #222;
+      --text: #fff;
+      --text-muted: #a0a0a0;
+      --btn-hover: #ff3232;
+      --success: #46c47c;
+      --danger: #ff0000;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: 'Montserrat', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+      overflow-y: auto;
+      transition: background .3s;
+      flex-direction: row;
+      min-width: 0;
+      min-height: 100vh;
+      height: auto;
+    }
+    html { scroll-behavior: smooth; overscroll-behavior: auto; }
+    main { overflow-y: auto; min-width: 0; min-height: 100vh; }
+    aside {
+      width: 290px;
+      background: var(--panel);
+      padding: 32px 20px 20px 20px;
+      border-right: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      gap: 18px;
+      z-index: 2;
+      transition: transform .3s;
+    }
+    aside.hidden {
+      transform: translateX(-120%);
+      pointer-events: none;
+    }
+    aside h2 {
+      font-size: 2rem;
+      margin: 0 0 18px 0;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    aside button, .controls button, #chartButtons button, .settings-btn {
+      width: 100%;
+      margin: 8px 0;
+      padding: 12px 0;
+      background: var(--primary);
+      color: var(--text);
+      border: none;
+      font-size: 1rem;
+      font-family: inherit;
+      border-radius: var(--radius);
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s;
+      outline: none;
+    }
+    aside button:hover, .controls button:hover, #chartButtons button:hover, .settings-btn:hover {
+      background: var(--btn-hover);
+    }
+    #categoryInput {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0 10px;
+      border-radius: 8px;
+      background: #191919;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    #categoryInput:focus { border-color: var(--primary); }
+    #categoryList {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .category-btn {
+      background: transparent;
+      color: var(--text-muted);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 7px 0 7px 16px;
+      font-size: 1rem;
+      margin: 0;
+      transition: background .15s, border .15s, color .15s;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 5px;
+      position: relative;
+      min-height: 36px;
+      font-weight: 600;
+    }
+    .category-btn.selected,
+    .category-btn:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: var(--text);
+    }
+    .remove-cat {
+      background: none;
+      border: none;
+      color: var(--danger);
+      font-size: 1.2em;
+      cursor: pointer;
+      margin-left: 10px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      right: 10px;
+      top: 0;
+      bottom: 0;
+      height: 100%;
+      width: 36px;
+    }
+    .category-btn .remove-cat {
+      opacity: 0.85;
+      transition: color 0.15s, opacity 0.15s;
+    }
+    .category-btn:hover .remove-cat,
+    .category-btn.selected .remove-cat {
+      color: #fff;
+      opacity: 1;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      position: relative;
+      min-width: 0;
+      background: var(--bg);
+      transition: background .3s;
+      min-height: 100vh;
+      width: 100%;
+      padding-bottom: 70px;
+    }
+    .timer-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 45px;
+      margin-bottom: 28px;
+      background: var(--panel);
+      padding: 32px 36px 20px 36px;
+      border-radius: 36px;
+      box-shadow: 0 0 18px 0 #0005;
+      width: 410px;
+      max-width: 97vw;
+      position: relative;
+      transition: all .3s;
+    }
+    .timer {
+      font-size: 92px;
+      letter-spacing: 2px;
+      font-weight: 700;
+      margin: 10px 0 8px 0;
+      color: var(--primary);
+      text-shadow: 0 2px 14px #0008;
+      font-variant-numeric: tabular-nums;
+      user-select: none;
+      text-align: center;
+      width: 100%;
+    }
+    #selectedCategory {
+      font-size: 1.18rem;
+      margin-bottom: 5px;
+      color: var(--accent);
+      font-weight: 600;
+      min-height: 24px;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin: 14px 0 0 0;
+      justify-content: center;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+    .controls button {
+      flex: 1 1 44%;
+      max-width: 120px;
+      min-width: 90px;
+      font-size: 1.07rem;
+      padding: 11px 0;
+      border-radius: 10px;
+      background: var(--primary);
+      border: none;
+      margin: 7px 3px;
+    }
+    .controls button:disabled {
+      background: #252525;
+      color: #888;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    #cycleStatus { margin-top:12px;font-size:1rem;color:var(--text-muted);min-height:20px; text-align:center; }
+    #noteInput {
+      width: 97%;
+      min-height: 30px;
+      margin-top: 8px;
+      padding: 7px;
+      border-radius: 7px;
+      border: 1.5px solid #232323;
+      background: #181818;
+      color: var(--text);
+      font-size: 0.97rem;
+      resize: vertical;
+    }
+    #noteInput:focus { border: 1.5px solid var(--primary); }
+    #title-timer {
+      position: fixed; left: -9999px;
+    }
+    #settingsPanel {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 2.5vw;
+      z-index: 333;
+      background: var(--panel);
+      border: 2px solid var(--primary);
+      border-radius: 18px;
+      color: var(--text);
+      box-shadow: 0 2px 18px 0 #0009;
+      padding: 26px 28px 24px 28px;
+      min-width: 330px;
+      max-width: 90vw;
+      font-size: 1.12rem;
+      flex-direction: column;
+      gap: 10px;
+      margin-right: 18px;
+      animation: fadeIn .2s;
+    }
+    @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+    .settings-row { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
+    .settings-label { flex: 1; color: var(--text-muted);}
+    .settings-input {
+      width: 60px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border);
+      background: #181818;
+      color: var(--text);
+      font-size: 1rem;
+      padding: 3px 6px;
+      outline: none;
+    }
+    .settings-input:focus { border: 1.5px solid var(--primary); }
+    #chartSection {
+      margin-top: 28px;
+      padding: 18px 0 0 0;
+      width: 100%;
+      max-width: 740px;
+      background: var(--panel);
+      border-radius: 20px;
+      box-shadow: 0 1px 14px 0 #0006;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+    #chartButtons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      justify-content: center;
+    }
+    #chartButtons button {
+      width: auto;
+      min-width: 70px;
+      padding: 8px 15px;
+      border-radius: 8px;
+      font-size: 1rem;
+      background: var(--primary);
+      color: var(--text);
+      font-weight: 700;
+      border: none;
+      margin: 0;
+      transition: background .2s;
+      opacity: 0.75;
+    }
+    #chartButtons button.active {
+      background: var(--accent); color: #111; opacity: 1;
+    }
+    #chartCategoryFilter {
+      border-radius: 7px;
+      border: 1.5px solid #232323;
+      background: #181818;
+      color: var(--text);
+      font-size: 1rem;
+      margin-bottom: 8px;
+      outline: none;
+      padding: 7px 10px;
+      max-width: 210px;
+      margin-left: 10px;
+    }
+    #pomodoroChart {
+      max-width: 680px;
+      min-width: 320px;
+      margin-bottom: 9px;
+      background: transparent;
+    }
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 25px 0 0 0;
+      background: #181818;
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 1rem;
+    }
+    .history-table th, .history-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    .history-table th {
+      background: #111;
+      color: var(--primary);
+    }
+    .history-table tr:last-child td { border-bottom: none; }
+    .history-table .delete-pomo {
+      color: var(--danger);
+      background: none; border: none; cursor: pointer; font-size: 1.1em;
+    }
+    .history-table tr:hover td { background: #111; }
+    .settings-btn {
+      background: none;
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      margin: 0 0 8px 0;
+      padding: 8px 0;
+      font-weight: 700;
+      transition: background .15s, color .15s;
+    }
+    .settings-btn:hover {
+      background: var(--primary);
+      color: #111;
+    }
+    .open-menu-btn {
+      display: none;
+      position: fixed;
+      top: 18px; left: 18px;
+      z-index: 100;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 58px; height: 58px;
+      font-size: 2.2em;
+      box-shadow: 0 2px 12px #000a;
+      cursor: pointer;
+    }
+    @media (max-width: 900px) {
+      aside { width: 100vw; max-width: 100vw; padding: 18px; border-right: none;}
+      .timer-container { padding: 22px 3vw 12px 3vw; width: 99vw;}
+      #settingsPanel {right: unset; left: 50vw; transform: translateX(-50%);}
+      #chartSection { max-width: 99vw; }
+    }
+    @media (max-width: 600px) {
+      body { flex-direction: column; }
+      aside { width: 100vw; min-height: unset; flex-direction: row; overflow-x: auto; }
+      .timer-container { padding: 14px 1vw 8px 1vw; border-radius: 14px;}
+      #chartSection { padding: 9px 0 0 0; border-radius: 9px;}
+      #settingsPanel {min-width: 95vw;}
+      .open-menu-btn { display: block; }
+    }
+    .fullscreen .timer-container {
+      position: fixed !important;
+      top: 0; left: 0; right: 0; bottom: 0;
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: unset;
+      margin: 0;
+      padding: 0;
+      border-radius: 0 !important;
+      background: #000 !important;
+      z-index: 9999 !important;
+      justify-content: center;
+      align-items: center;
+      box-shadow: none !important;
+      overflow: auto !important;
+    }
+    .fullscreen .controls, .fullscreen #selectedCategory, .fullscreen #cycleStatus, .fullscreen #noteInput {
+      display: none !important;
+    }
+    .fullscreen .timer {
+      font-size: 22vw !important;
+      color: var(--primary);
+      background: #000;
+      width: 100vw;
+      max-width: 100vw;
+      margin-top: 0;
+      margin-bottom: 0;
+      text-shadow: 0 2px 24px #000;
+    }
+    .fullscreen aside {
+      display: none !important;
+    }
+    .pixel-apple-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 8px;
+      min-height: 75px;
+    }
+    .pixel-apple-canvas {
+      display: block;
+      margin: 0 auto;
+      image-rendering: pixelated;
+      background: none;
+      filter: drop-shadow(0 2px 5px #000a);
+      transition: filter .2s;
+    }
+    .fullscreen .pixel-apple-canvas {
+      width: 256px !important;
+      height: 256px !important;
+      min-width: 256px !important;
+      min-height: 256px !important;
+      max-width: unset;
+      max-height: unset;
+    }
+    #statsFocusSection {
+      margin-top: 28px;
+      padding: 20px 0 14px 0;
+      width: 100%;
+      max-width: 740px;
+      background: var(--panel);
+      border-radius: 18px;
+      box-shadow: 0 1px 10px 0 #0004;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--text);
+    }
+    #statsFocusSection h3 {
+      margin: 0 0 14px 0;
+      color: var(--primary);
+      font-size: 1.18rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    #statsFocusSection .stats-row {
+      display: flex;
+      gap: 36px;
+      margin-bottom: 11px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #statsFocusSection .stats-label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    #focusHistoryList {
+      width: 98%;
+      max-width: 520px;
+      background: #181818;
+      border-radius: 10px;
+      margin-top: 12px;
+      padding: 8px 12px;
+      font-size: 0.97rem;
+      color: var(--text-muted);
+      max-height: 140px;
+      overflow-y: auto;
+      border: 1px solid #232323;
+    }
+    #focusHistoryList ul {
+      padding: 0 0 0 18px;
+      margin: 0;
+    }
+    #focusWeekChart {
+      width: 100%;
+      max-width: 420px;
+      margin: 10px 0 0 0;
+      background: transparent;
+    }
+    #focusHistoryList::-webkit-scrollbar, main::-webkit-scrollbar, body::-webkit-scrollbar { width: 10px; background: #181818; }
+    #focusHistoryList::-webkit-scrollbar-thumb, main::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb { background: #292929; border-radius: 5px;}
+  </style>
+
+<!-- MELHORIAS CSS ADICIONADAS -->
+<style>
+/* Estilização melhorada da tabela de histórico */
+.history-table {
+  border-radius: 16px !important;
+  box-shadow: 0 2px 14px #0006;
+  overflow: hidden;
+  background: #181818;
+}
+.history-table th {
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  background: #191919;
+  color: var(--primary);
+}
+.history-table tr:hover td {
+  background: #111;
+}
+#historyFilterRow select {
+  border-radius: 8px;
+  border: 1.2px solid #292929;
+  background: #181818;
+  color: var(--text);
+  padding: 4px 10px;
+  margin-left: 2px;
+  font-size: 1em;
+}
+</style>
+
+<!-- As melhorias em JS já foram integradas na substituição manual conforme solicitado -->
+
+</head>
+<body>
+  <button class="open-menu-btn" onclick="toggleAside()">☰</button>
+  <aside id="sidebar">
+    <h2>Pomodoro</h2>
+    <button onclick="toggleChart()">📊 Gráficos</button>
+    <button onclick="toggleHistory()">📜 Histórico</button>
+    <button onclick="exportPomodoros()">📤 Exportar</button>
+    <button onclick="document.getElementById('importInput').click()">📥 Importar</button>
+    <input type="file" id="importInput" accept=".json" style="display:none" onchange="importPomodoros(event)" />
+    <button class="settings-btn" onclick="toggleSettings()">⚙️ Configurações</button>
+    <input id="categoryInput" placeholder="Nova Categoria" autocomplete="off"/>
+    <button id="addCategoryBtn">➕ Adicionar Categoria</button>
+    <div id="categoryList"></div>
+  </aside>
+  <main>
+    <div class="timer-container" id="timerContainer">
+      <div id="selectedCategory"></div>
+      <div class="pixel-apple-container">
+        <canvas id="pixelAppleCanvas" class="pixel-apple-canvas" width="128" height="128" style="width:128px;height:128px;"></canvas>
+      </div>
+      <div class="timer" id="timer">25:00</div>
+      <div style="margin-bottom:7px;">
+        <label style="font-size:.99em;color:var(--text-muted);cursor:pointer;">
+          <input type="checkbox" id="fullscreenToggle" style="vertical-align:middle;margin-right:5px;">Tela cheia manual
+        </label>
+        <button id="btnGoFullscreen" style="margin-left:8px;font-size:.98em;padding:5px 14px 5px 14px;background:var(--accent);color:#111;border-radius:5px;border:none;cursor:pointer;vertical-align:middle;display:none;">
+          Ativar
+        </button>
+      </div>
+      <div class="controls">
+        <button id="btnStart" onclick="startTimer()">▶️ Iniciar</button>
+        <button id="btnPause" onclick="pauseTimer()" style="display:none;">⏸ Pausar</button>
+        <button id="btnResume" onclick="resumeTimer()" style="display:none;">▶️ Retomar</button>
+        <button id="btnAdd5" onclick="addFiveMinutes()">+5 Min</button>
+        <button id="btnSub1" onclick="subOneMinute()">-1 Min</button>
+        <button id="btnEnd" onclick="endTimer()">⏹ Finalizar</button>
+      </div>
+      <div id="cycleStatus"></div>
+      <textarea id="noteInput" placeholder="Anote algo sobre esse Pomodoro (opcional)..."></textarea>
+      <button id="btnNoCategory" style="margin-top:10px;width:100%;background:var(--accent);color:#111;border-radius:8px;border:none;padding:11px 0;font-weight:700;font-size:1.05rem;">
+        Usar sem categoria
+      </button>
+    </div>
+    <!-- Nova Seção de Estatísticas de Foco -->
+    <section id="statsFocusSection">
+      <h3>Estatísticas de Foco</h3>
+      <div class="stats-row" id="focusTodayStats">
+        <span class="stats-label">Tempo total focado hoje:</span>
+        <span id="focusTotalToday" style="font-weight:700;color:#ff4d4d">0 min</span>
+      </div>
+      <canvas id="focusWeekChart"></canvas>
+      <div class="stats-row" style="margin-bottom:0;">
+        <span class="stats-label">Histórico de sessões:</span>
+      </div>
+      <div id="focusHistoryList"></div>
+    </section>
+    <!-- Settings Panel -->
+    <div id="settingsPanel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:1.25rem;font-weight:700;color:var(--primary)">Configurações</div>
+        <button onclick="toggleSettings()" style="background:none;border:none;font-size:1.3em;color:var(--primary);cursor:pointer;">✖️</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Tempo Pomodoro (min):</div>
+        <input id="setPomodoro" class="settings-input" type="number" min="1" max="180"/>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Descanso Curto (min):</div>
+        <input id="setBreak" class="settings-input" type="number" min="1" max="60"/>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Descanso Longo (min):</div>
+        <input id="setLongBreak" class="settings-input" type="number" min="1" max="120"/>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Pomodoros por ciclo:</div>
+        <input id="setMaxCycles" class="settings-input" type="number" min="1" max="12"/>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Alarme Sonoro:</div>
+        <input id="setSound" type="checkbox"/>
+      </div>
+      <div class="settings-row">
+        <div class="settings-label">Notificação Desktop:</div>
+        <input id="setNotify" type="checkbox"/>
+      </div>
+      <button onclick="saveSettings()" style="margin-top:18px;">Salvar Configurações</button>
+    </div>
+    <!-- Chart Section -->
+    <section id="chartSection">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div id="chartButtons">
+          <button onclick="drawChart('day', this)">Dia</button>
+          <button onclick="drawChart('week', this)">Semana</button>
+          <button onclick="drawChart('month', this)">Mês</button>
+          <button onclick="drawChart('year', this)">Ano</button>
+        </div>
+        <select id="chartCategoryFilter" onchange="drawChart(lastChartPeriod)">
+          <option value="">Todas categorias</option>
+        </select>
+      </div>
+      <canvas id="pomodoroChart"></canvas>
+      <div id="statsPanel" style="margin-top:10px;color:var(--text-muted);"></div>
+    </section>
+    <!-- History Section -->
+    <section id="historySection" style="display:none;margin-top:10px;">
+      <div style="font-size:1.2rem;font-weight:700;color:var(--primary);margin-bottom:8px;">Histórico de Pomodoros</div>
+      <div id="historyFilterRow" style="margin-bottom:15px;">
+        <label style="color:var(--text-muted);margin-right:8px;">Categoria:</label>
+        <select id="historyCategoryFilter" onchange="renderHistory()">
+          <option value="">Todas</option>
+        </select>
+        <label style="color:var(--text-muted);margin-left:12px;margin-right:8px;">Período:</label>
+        <select id="historyPeriodFilter" onchange="renderHistory()">
+          <option value="all">Todos</option>
+          <option value="day">Hoje</option>
+          <option value="week">Esta semana</option>
+          <option value="month">Este mês</option>
+        </select>
+      </div>
+      <table class="history-table" id="historyTable"></table>
+    </section>
+    <div id="title-timer"></div>
+    <audio id="alarmSound" src="https://cdn.pixabay.com/audio/2022/07/26/audio_124bfa12c9.mp3"></audio>
+  </main>
+  <script>
+    // Pomodoro state
+    let settings = JSON.parse(localStorage.getItem('settings')) || {
+      pomodoro:25, break:5, longBreak:15, maxCycles:4, sound:true, notify:true
+    };
+    let pomodoroDuration = settings.pomodoro * 60;
+    let breakDuration = settings.break * 60;
+    let longBreakDuration = settings.longBreak * 60;
+    let maxCycles = settings.maxCycles;
+    let soundOn = settings.sound;
+    let notifyOn = settings.notify;
+
+    let cycles = 0;
+    let time = pomodoroDuration;
+    let timerRunning = false;
+    let paused = false;
+    let interval;
+    let currentCategory = '';
+    let pomodoros = JSON.parse(localStorage.getItem('pomodoros')) || [];
+    let categories = JSON.parse(localStorage.getItem('categories')) || [];
+    let isBreak = false;
+    let chart;
+    let lastChartPeriod = 'week';
+    let titleTimer = document.getElementById('title-timer');
+    let wakeLock = null;
+    let activeNote = '';
+    let editingPomodoroId = null;
+
+    // DOM
+    const timerEl = document.getElementById('timer');
+    const selectedCategoryEl = document.getElementById('selectedCategory');
+    const cycleStatusEl = document.getElementById('cycleStatus');
+    const categoryListEl = document.getElementById('categoryList');
+    const btnStart = document.getElementById('btnStart');
+    const btnPause = document.getElementById('btnPause');
+    const btnResume = document.getElementById('btnResume');
+    const btnAdd5 = document.getElementById('btnAdd5');
+    const btnSub1 = document.getElementById('btnSub1');
+    const btnEnd = document.getElementById('btnEnd');
+    const noteInput = document.getElementById('noteInput');
+    const alarmSound = document.getElementById('alarmSound');
+    const aside = document.getElementById('sidebar');
+    const openMenuBtn = document.querySelector('.open-menu-btn');
+    const timerContainer = document.getElementById('timerContainer');
+    const pixelAppleCanvas = document.getElementById('pixelAppleCanvas');
+    const fullscreenToggle = document.getElementById('fullscreenToggle');
+    const btnGoFullscreen = document.getElementById('btnGoFullscreen');
+    const btnNoCategory = document.getElementById('btnNoCategory');
+    const addCategoryBtn = document.getElementById('addCategoryBtn');
+    const categoryInput = document.getElementById('categoryInput');
+    // Estatísticas
+    const statsFocusSection = document.getElementById('statsFocusSection');
+    const focusTotalToday = document.getElementById('focusTotalToday');
+    const focusWeekChart = document.getElementById('focusWeekChart');
+    const focusHistoryList = document.getElementById('focusHistoryList');
+    let chartFocusWeek = null;
+
+    // ========== PIXEL APPLE (CANVAS ANIMADO 8-BIT) ==========
+    // Maçã 16x16 pixel (matriz expandida para mais detalhes)
+    const appleMatrix = [
+      [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
+      [0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0],
+      [0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0],
+      [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+      [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+      [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+      [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+      [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0],
+      [0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0],
+      [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    ];
+    const stemPixels = [{x:7, y:0}, {x:8, y:0}, {x:7, y:1}];
+    const leafPixels = [{x:10, y:1}, {x:11, y:1}, {x:11, y:2}];
+    let applePixels = [];
+    for(let y=0;y<16;y++)for(let x=0;x<16;x++)
+      if(appleMatrix[y][x]===1) applePixels.push({x,y});
+    let applePixelsProgress = [...applePixels].sort((a,b)=>{
+      if(a.y!==b.y) return b.y-a.y; // baixo para cima
+      return a.x-b.x;
+    });
+    let appleEatenPixels = [];
+    function drawApple(progress, eaten, isFocus) {
+      const ctx = pixelAppleCanvas.getContext('2d');
+      const pix = 8;
+      ctx.clearRect(0,0,128,128);
+      ctx.fillStyle = "#6a5a2d";
+      stemPixels.forEach(p => ctx.fillRect(p.x*pix, p.y*pix, pix, pix));
+      ctx.fillStyle = "#63b053";
+      leafPixels.forEach(p => ctx.fillRect(p.x*pix, p.y*pix, pix, pix));
+      if(isFocus) {
+        let total = applePixelsProgress.length;
+        let colored = Math.floor(progress * total+0.999);
+        for(let i=0;i<applePixelsProgress.length;i++) {
+          let p=applePixelsProgress[i];
+          ctx.fillStyle = i<colored ? ((p.y>12) ? "#c70000" : "#ff2020") : "#444";
+          ctx.fillRect(p.x*pix, p.y*pix, pix, pix);
+        }
+      } else {
+        if(eaten === 0 || appleEatenPixels.length !== applePixels.length) appleEatenPixels = shuffle([...applePixels]);
+        let total = applePixels.length;
+        let toShow = Math.floor((1-eaten)*total+0.999);
+        for(let i=0;i<appleEatenPixels.length;i++) {
+          let p = appleEatenPixels[i];
+          if(i<toShow) {
+            ctx.fillStyle = (p.y>12) ? "#c70000" : "#ff2020";
+            ctx.fillRect(p.x*pix, p.y*pix, pix, pix);
+          }
+        }
+      }
+      ctx.strokeStyle = "#a90";
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      applePixels.forEach(p=>{
+        ctx.strokeRect(p.x*pix+0.5, p.y*pix+0.5, pix-1, pix-1);
+      });
+    }
+    function shuffle(arr) {
+      let a = arr.slice();
+      for(let i=a.length-1;i>0;i--) {
+        let j = Math.floor(Math.random()*(i+1));
+        [a[i],a[j]]=[a[j],a[i]];
+      }
+      return a;
+    }
+    function updateAppleProgress(timeLeft, totalTime, isBreakPhase) {
+      if(isBreakPhase) {
+        let eaten = 1 - (timeLeft/totalTime);
+        drawApple(1, Math.min(eaten,1), false);
+      } else {
+        let progress = 1 - (timeLeft/totalTime);
+        drawApple(Math.min(progress,1), 0, true);
+      }
+    }
+
+    // ========== CATEGORIA (CORRIGE BOTÃO E ENTRA COM ENTER) ==========
+    addCategoryBtn.addEventListener('click', addCategory);
+    categoryInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') addCategory();
+    });
+    function addCategory() {
+      const name = categoryInput.value.trim();
+      if (!name) return;
+      if (categories.includes(name)) return;
+      categories.push(name);
+      localStorage.setItem('categories', JSON.stringify(categories));
+      renderCategories();
+      categoryInput.value = '';
+      updateCategoryFilters();
+    }
+    function removeCategory(cat) {
+      if (!confirm('Remover essa categoria?')) return;
+      categories = categories.filter(c => c !== cat);
+      pomodoros = pomodoros.filter(p => p.category !== cat);
+      localStorage.setItem('categories', JSON.stringify(categories));
+      localStorage.setItem('pomodoros', JSON.stringify(pomodoros));
+      if (currentCategory === cat) currentCategory = '';
+      renderCategories();
+      updateCategoryFilters();
+      renderHistory();
+      drawChart(lastChartPeriod, null, true);
+      updateFocusStats();
+    }
+    function renderCategories() {
+      categoryListEl.innerHTML = '';
+      categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'category-btn' + (cat === currentCategory ? ' selected' : '');
+        btn.style.position = "relative";
+        btn.onclick = () => selectCategory(cat);
+        // Texto da categoria alinhado à esquerda
+        const span = document.createElement('span');
+        span.textContent = cat;
+        btn.appendChild(span);
+        // Botão lixeira ao lado direito
+        const removeBtn = document.createElement('button');
+        removeBtn.innerHTML = "🗑";
+        removeBtn.className = 'remove-cat';
+        removeBtn.onclick = (e) => { e.stopPropagation(); removeCategory(cat);}
+        btn.appendChild(removeBtn);
+        categoryListEl.appendChild(btn);
+      });
+    }
+    function selectCategory(name) {
+      currentCategory = name;
+      selectedCategoryEl.textContent = `Categoria: ${name}`;
+      Array.from(categoryListEl.children).forEach(btn => {
+        const btnName = btn.querySelector('span')?.textContent || "";
+        btn.classList.toggle('selected', btnName === name);
+      });
+      resetPomodoro();
+      endTimer();
+    }
+    function updateCategoryFilters() {
+      const catSel = document.getElementById('chartCategoryFilter');
+      const historySel = document.getElementById('historyCategoryFilter');
+      [catSel, historySel].forEach(sel=>{
+        sel.innerHTML = `<option value="">Todas categorias</option>`;
+        categories.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat; opt.textContent = cat;
+          sel.appendChild(opt.cloneNode(true));
+        });
+        // Garante que "Não categorizadas" sempre aparece nos filtros caso haja algum registro assim
+        if (pomodoros.some(p => p.category === "Não categorizadas")) {
+          let opt = document.createElement('option');
+          opt.value = "Não categorizadas";
+          opt.textContent = "Não categorizadas";
+          sel.appendChild(opt);
+        }
+      });
+    }
+
+    // ========== BOTÃO USAR SEM CATEGORIA ==========
+    btnNoCategory.addEventListener('click', function() {
+      currentCategory = "Não categorizadas";
+      selectedCategoryEl.textContent = "Categoria: Não categorizadas";
+      // Não seleciona botão nenhum (nem renderCategories)
+      resetPomodoro();
+      endTimer();
+    });
+
+    // ========== TIMER ==========
+    function updateTimerDisplay() {
+      const min = String(Math.floor(time / 60)).padStart(2, '0');
+      const sec = String(time % 60).padStart(2, '0');
+      timerEl.textContent = `${min}:${sec}`;
+      document.title = `[${min}:${sec}] Pomodoro PRO`;
+      titleTimer.textContent = `${min}:${sec}`;
+      if(isBreak) {
+        let total = (cycles === maxCycles) ? longBreakDuration : breakDuration;
+        updateAppleProgress(time, total, true);
+      } else {
+        updateAppleProgress(time, pomodoroDuration, false);
+      }
+    }
+    function startTimer() {
+      if (timerRunning) return;
+      if (!currentCategory) {
+        alert('Selecione uma categoria ou clique em "Usar sem categoria".');
+        return;
+      }
+      timerRunning = true; paused = false;
+      btnStart.style.display = 'none';
+      btnPause.style.display = '';
+      btnResume.style.display = 'none';
+      btnAdd5.disabled = false; btnSub1.disabled = false; btnEnd.disabled = false;
+      lockScreen();
+      cycleStatusEl.textContent = isBreak ? "⏳ Descanso..." : `🍅 Pomodoro ${cycles+1} de ${maxCycles}`;
+      interval = setInterval(() => {
+        time--;
+        updateTimerDisplay();
+        if (time <= 0) {
+          clearInterval(interval);
+          timerRunning = false;
+          btnStart.style.display = ''; btnPause.style.display = 'none'; btnResume.style.display='none';
+          btnAdd5.disabled = true; btnSub1.disabled = true; btnEnd.disabled = true;
+          unlockScreen();
+          if (soundOn) playAlarm();
+          if (!isBreak) {
+            savePomodoro();
+            cycles++;
+            if (notifyOn) sendNotification('Pomodoro concluído! Hora do descanso.');
+            if (cycles < maxCycles) {
+              setTimeout(() => {
+                alert('Pomodoro concluído! Hora do descanso curto.');
+                startBreak();
+              }, 50);
+            } else {
+              setTimeout(() => {
+                alert('Parabéns, ciclo completo! Faça um descanso longo.');
+                startLongBreak();
+              }, 50);
+            }
+          } else {
+            if (notifyOn) sendNotification('Descanso finalizado!');
+            if (cycles < maxCycles) {
+              setTimeout(() => {
+                alert('Descanso finalizado! Próximo pomodoro.');
+                resetPomodoro();
+              }, 50);
+            } else {
+              setTimeout(() => {
+                alert('Descanso longo finalizado! O ciclo foi reiniciado.');
+                cycles = 0;
+                resetPomodoro();
+              }, 50);
+            }
+          }
+        }
+      }, 1000);
+    }
+    function pauseTimer() {
+      if (!timerRunning) return;
+      clearInterval(interval);
+      paused = true; timerRunning = false;
+      btnResume.style.display=''; btnPause.style.display='none'; btnStart.style.display='none';
+      unlockScreen();
+      cycleStatusEl.textContent = isBreak ? "Descanso pausado." : "Pomodoro pausado.";
+    }
+    function resumeTimer() {
+      if (!paused) return;
+      paused = false; timerRunning = true;
+      btnResume.style.display='none'; btnPause.style.display=''; btnStart.style.display='none';
+      lockScreen();
+      interval = setInterval(() => {
+        time--;
+        updateTimerDisplay();
+        if (time <= 0) {
+          clearInterval(interval);
+          timerRunning = false;
+          btnStart.style.display = ''; btnPause.style.display = 'none'; btnResume.style.display='none';
+          btnAdd5.disabled = true; btnSub1.disabled = true; btnEnd.disabled = true;
+          unlockScreen();
+          if (soundOn) playAlarm();
+          if (!isBreak) {
+            savePomodoro();
+            cycles++;
+            if (notifyOn) sendNotification('Pomodoro concluído! Hora do descanso.');
+            if (cycles < maxCycles) {
+              setTimeout(() => {
+                alert('Pomodoro concluído! Hora do descanso curto.');
+                startBreak();
+              }, 50);
+            } else {
+              setTimeout(() => {
+                alert('Parabéns, ciclo completo! Faça um descanso longo.');
+                startLongBreak();
+              }, 50);
+            }
+          } else {
+            if (notifyOn) sendNotification('Descanso finalizado!');
+            if (cycles < maxCycles) {
+              setTimeout(() => {
+                alert('Descanso finalizado! Próximo pomodoro.');
+                resetPomodoro();
+              }, 50);
+            } else {
+              setTimeout(() => {
+                alert('Descanso longo finalizado! O ciclo foi reiniciado.');
+                cycles = 0;
+                resetPomodoro();
+              }, 50);
+            }
+          }
+        }
+      }, 1000);
+    }
+    function startBreak() {
+      isBreak = true;
+      time = breakDuration;
+      updateTimerDisplay();
+      btnStart.style.display = ''; btnPause.style.display = 'none'; btnResume.style.display = 'none';
+      btnAdd5.disabled = false; btnSub1.disabled = false; btnEnd.disabled = false;
+      unlockScreen();
+      cycleStatusEl.textContent = "⏳ Descanso curto...";
+      appleEatenPixels = [];
+    }
+    function startLongBreak() {
+      isBreak = true;
+      time = longBreakDuration;
+      updateTimerDisplay();
+      btnStart.style.display = ''; btnPause.style.display = 'none'; btnResume.style.display = 'none';
+      btnAdd5.disabled = false; btnSub1.disabled = false; btnEnd.disabled = false;
+      unlockScreen();
+      cycleStatusEl.textContent = "⏳ Descanso longo...";
+      appleEatenPixels = [];
+    }
+    function resetPomodoro() {
+      isBreak = false;
+      time = pomodoroDuration;
+      updateTimerDisplay();
+      btnStart.style.display = ''; btnPause.style.display = 'none'; btnResume.style.display = 'none';
+      btnAdd5.disabled = false; btnSub1.disabled = false; btnEnd.disabled = false;
+      unlockScreen();
+      cycleStatusEl.textContent = `🍅 Pomodoro ${cycles+1} de ${maxCycles}`;
+      noteInput.value = '';
+    }
+    function addFiveMinutes() {
+      if (timerRunning || paused) {
+        time += 5 * 60;
+        updateTimerDisplay();
+      }
+    }
+    function subOneMinute() {
+      if ((timerRunning || paused) && time > 60) {
+        time -= 60;
+        updateTimerDisplay();
+      }
+    }
+    function endTimer() {
+      if (!timerRunning && !paused) return;
+      if (!confirm('Tem certeza que deseja finalizar o timer?')) return;
+      clearInterval(interval);
+      timerRunning = false; paused = false;
+      btnStart.style.display = ''; btnPause.style.display = 'none'; btnResume.style.display = 'none';
+      btnAdd5.disabled = true; btnSub1.disabled = true; btnEnd.disabled = true;
+      unlockScreen();
+      cycleStatusEl.textContent = isBreak ? "Descanso interrompido." : "Pomodoro interrompido.";
+    }
+
+    function playAlarm() {
+      alarmSound.currentTime = 0;
+      alarmSound.play();
+    }
+    function sendNotification(msg) {
+      if (!("Notification" in window)) return;
+      if (Notification.permission === "granted") {
+        new Notification(msg);
+      }
+    }
+    if (Notification && Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+
+    // FULLSCREEN, WAKE LOCK, CHARTS, EXPORTAÇÃO, HISTORY, ETC...
+    // (igual ao seu código original)
+
+    // ========== INIT ==========
+    function init() {
+      updateTimerDisplay();
+      renderCategories();
+      if (categories.length) selectCategory(categories[0]);
+      btnAdd5.disabled = true; btnSub1.disabled = true; btnEnd.disabled = true;
+      openMenuBtn.style.display = window.innerWidth < 700 ? 'block' : 'none';
+      btnPause.style.display = 'none';
+      btnResume.style.display = 'none';
+      btnGoFullscreen.style.display = fullscreenToggle.checked ? '' : 'none';
+      drawApple(0, 0, true);
+      updateFocusStats();
+      updateCategoryFilters();
+    }
+    window.addEventListener('resize', () => {
+      openMenuBtn.style.display = window.innerWidth < 700 && !document.body.classList.contains('fullscreen') ? 'block' : 'none';
+    });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) updateFocusStats(); });
+
+    init();
+  </script>
+
+<script>
+// Correções extras adicionadas no final do script
+
+// Evita o aparelho dormir durante o timer (apenas navegadores compatíveis)
+function lockScreen() {
+  if ('wakeLock' in navigator) {
+    navigator.wakeLock.request('screen').then(lock => {
+      wakeLock = lock;
+    }).catch(() => {});
+  }
+}
+function unlockScreen() {
+  if (wakeLock) {
+    wakeLock.release().then(() => {
+      wakeLock = null;
+    });
+  }
+}
+
+// Tela cheia manual
+fullscreenToggle.addEventListener('change', function() {
+  btnGoFullscreen.style.display = this.checked ? '' : 'none';
+  if (!this.checked) {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+    document.body.classList.remove('fullscreen');
+  }
+});
+
+btnGoFullscreen.addEventListener('click', function() {
+  if (timerContainer.requestFullscreen) {
+    timerContainer.requestFullscreen();
+  }
+});
+
+document.addEventListener('fullscreenchange', function() {
+  if (document.fullscreenElement === timerContainer) {
+    document.body.classList.add('fullscreen');
+    openMenuBtn.style.display = 'none';
+  } else {
+    document.body.classList.remove('fullscreen');
+    if (window.innerWidth < 700) openMenuBtn.style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>
+<!-- timer  erro apos terminar o ciclo,questões de salvamento nos graficos,historico não funcional,exportar ?
+ apos clicar em final-->

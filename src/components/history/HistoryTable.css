@@ -1,0 +1,60 @@
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.filters-container {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.history-table th, .history-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.history-table tbody tr {
+  transition: background 0.2s;
+}
+
+.history-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.badge {
+  background: var(--panel-light);
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.delete-btn {
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+
+.delete-btn:hover {
+  color: var(--danger);
+}
