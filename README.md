@@ -1,16 +1,41 @@
-# React + Vite
+# Pomodoro PRO 🍅
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Fala pessoal! 👋 Esse é um aplicativo de Pomodoro que criei para me ajudar (e ajudar quem precisar) a focar melhor nas tarefas do dia a dia e evitar a procrastinação.
 
-Currently, two official plugins are available:
+Eu já tinha feito uma versão mais simples antes, mas ela acabava dando uns bugs no timer (principalmente quando eu mudava de aba no navegador). Então, decidi **refatorar esse projeto do zero** usando uma stack mais moderna e robusta para garantir que ele ficasse 100% estável e funcional para o meu uso real.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+🔗 **[Acessar o Pomodoro PRO online](https://zero-0dev.github.io/pomodoro/)**
 
-## React Compiler
+## O que tem de legal aqui? 🚀
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Timer à prova de bugs:** Ele não pausa e nem "desacelera" se você trocar de aba. O tempo é calculado com base no relógio do sistema.
+- **Chega de procrastinar:** Antes de focar, ele te pergunta *o que* você vai fazer. No fim do foco, você avalia se conseguiu terminar ou não.
+- **Histórico e Gráficos:** Tem uma aba só para você ver todo o seu progresso, com gráficos mostrando suas estatísticas de sucesso nas tarefas (tudo construído com Recharts).
+- **Sem banco de dados, muita privacidade:** Salva tudo localmente no seu navegador de forma segura (`localStorage`).
+- **Backup dos dados:** Nas configurações, dá pra exportar todo o seu histórico e configurações para um JSON e importar em outra máquina.
 
-## Expanding the ESLint configuration
+## Ferramentas que usei 🛠️
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **React + Vite:** Para criar a interface rápida e componentizada, sem dores de cabeça.
+- **CSS puro (modules global):** Mantendo a simplicidade e leveza, sem bibliotecas pesadas de estilo, mas com uma pegada Dark Mode moderna.
+- **Lucide React:** Para uns ícones minimalistas e bacanas.
+- **Recharts:** Para os gráficos do dashboard.
+
+## Como rodar o projeto na sua máquina 💻
+
+Se você quiser clonar e rodar o projeto localmente para dar uma olhada no código, é super simples:
+
+1. Clone esse repositório
+2. Abra seu terminal na pasta do projeto e rode o comando pra instalar as dependências:
+   ```bash
+   npm install
+   ```
+3. Inicie o servidor local de desenvolvimento:
+   ```bash
+   npm run dev
+   ```
+
+## Próximos passos (talvez?)
+- Futuramente penso em tentar colocar um banco de dados de verdade em nuvem (tipo Firebase) pra poder acessar o mesmo histórico do computador e do celular.
+
+Fique à vontade para usar o app ou fuçar no código! 🍻
