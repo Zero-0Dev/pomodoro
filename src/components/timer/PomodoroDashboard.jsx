@@ -7,7 +7,7 @@ import TaskEvaluation from './TaskEvaluation';
 
 export default function PomodoroDashboard() {
   const {
-    mode, cycles, timeLeft, isRunning,
+    mode, cycles, timeLeft, isRunning, isPaused,
     startTimer, pauseTimer, resumeTimer, stopTimer, switchMode, addTime,
     currentTask, currentCategory,
     isTaskPromptOpen, setIsTaskPromptOpen, startTaskWithInfo,
@@ -31,9 +31,11 @@ export default function PomodoroDashboard() {
       
       <Controls 
         isRunning={isRunning}
+        isPaused={isPaused}
         mode={mode}
         startTimer={startTimer}
         pauseTimer={pauseTimer}
+        resumeTimer={resumeTimer}
         stopTimer={stopTimer}
         addTime={addTime}
         switchMode={switchMode}
@@ -56,7 +58,6 @@ export default function PomodoroDashboard() {
         category={currentCategory}
         cycles={cycles}
         mode={mode}
-        expectedDuration={mode === 'focus' ? 'default' : 0} // Could refine duration calculation
       />
     </div>
   );

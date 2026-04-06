@@ -9,8 +9,7 @@ export default function TaskEvaluation({
   task, 
   category, 
   cycles, 
-  mode,
-  expectedDuration
+  mode
 }) {
   const { addHistoryEntry } = usePomodoro();
   const [evaluation, setEvaluation] = useState('concluido');
@@ -27,8 +26,7 @@ export default function TaskEvaluation({
       category,
       evaluation,
       note,
-      type: mode, // FOCO
-      duration: expectedDuration, // sec
+      type: mode,
     });
 
     setNote(''); // reset

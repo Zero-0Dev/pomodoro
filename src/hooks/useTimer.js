@@ -9,196 +9,210 @@ export const MODES = {
 
 export function useTimer() {
   const { settings } = usePomodoro();
-  
+
   const [mode, setMode] = useState(MODES.FOCUS);
   const [cycles, setCycles] = useState(0);
   const [timeLeft, setTimeLeft] = useState(settings.pomodoroTime * 60);
   const [isRunning, setIsRunning] = useState(false);
-  
+  const [isPaused, setIsPaused] = useState(false);
+
   // Anti-procrastination
   const [currentTask, setCurrentTask] = useState('');
   const [currentCategory, setCurrentCategory] = useState('');
   const [isTaskPromptOpen, setIsTaskPromptOpen] = useState(false);
   const [isEvaluationOpen, setIsEvaluationOpen] = useState(false);
 
-  // Refs for precise timing
+  // Refs for precise timing — avoid stale closures
   const endTimeRef = useRef(null);
   const timerRef = useRef(null);
+  // Store volatile state in refs so callbacks don't close over stale values
+  const modeRef = useRef(mode);
+  const cyclesRef = useRef(cycles);
+  const isRunningRef = useRef(isRunning);
+  const settingsRef = useRef(settings);
+
+  // Keep refs in sync
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => { cyclesRef.current = cycles; }, [cycles]);
+  useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
 
   const getDurationForMode = useCallback((m) => {
-    if (m === MODES.FOCUS) return settings.pomodoroTime * 60;
-    if (m === MODES.SHORT_BREAK) return settings.shortBreakTime * 60;
-    return settings.longBreakTime * 60;
-  }, [settings]);
+    const s = settingsRef.current;
+    if (m === MODES.FOCUS) return s.pomodoroTime * 60;
+    if (m === MODES.SHORT_BREAK) return s.shortBreakTime * 60;
+    return s.longBreakTime * 60;
+  }, []);
 
   const notify = useCallback((title, body) => {
-    if (settings.soundEnabled) {
+    const s = settingsRef.current;
+    if (s.soundEnabled) {
       const audio = new Audio('https://cdn.pixabay.com/audio/2022/07/26/audio_124bfa12c9.mp3');
-      audio.play().catch(e => console.error("Audio block:", e));
+      audio.play().catch(() => {});
     }
-    if (settings.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
+    if (s.notificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
       new Notification(title, { body });
     }
-  }, [settings]);
+  }, []);
 
-  // Sync initial timer when settings change (only if not running)
+  // Sync timer display when settings change (only if paused)
   useEffect(() => {
-    if (!isRunning) {
-      setTimeLeft(getDurationForMode(mode));
+    if (!isRunningRef.current) {
+      setTimeLeft(getDurationForMode(modeRef.current));
     }
-  }, [settings, mode, isRunning, getDurationForMode]);
+  }, [settings, getDurationForMode]);
 
-  // The actual interval loop
+  // The tick interval — only recreated when isRunning changes
   useEffect(() => {
     if (isRunning) {
       timerRef.current = setInterval(() => {
-        const now = Date.now();
-        const difference = Math.round((endTimeRef.current - now) / 1000);
-        
-        if (difference <= 0) {
-          setTimeLeft(0);
-        } else {
-          setTimeLeft(difference);
-        }
+        const remaining = Math.max(0, Math.round((endTimeRef.current - Date.now()) / 1000));
+        setTimeLeft(remaining);
       }, 500);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     }
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, [isRunning]);
 
-  // Watcher para quando o tempo acabar (Evita stale closures do setInterval)
+  // Timer completion watcher
   useEffect(() => {
-    if (timeLeft === 0 && isRunning) {
-      setIsRunning(false); // break reference
-      if (timerRef.current) clearInterval(timerRef.current);
-      
-      if (mode === MODES.FOCUS) {
-        notify("Pomodoro Concluído!", "Hora de registrar seu progresso.");
-        setIsEvaluationOpen(true);
-      } else {
-        notify("Descanso Finalizado!", "Pronto para o próximo foco?");
-        handleBreakComplete();
+    if (timeLeft !== 0 || !isRunning) return;
+
+    setIsRunning(false);
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+
+    const currentMode = modeRef.current;
+    if (currentMode === MODES.FOCUS) {
+      notify('Pomodoro Concluído!', 'Hora de registrar seu progresso.');
+      setIsEvaluationOpen(true);
+    } else {
+      notify('Descanso Finalizado!', 'Pronto para o próximo foco?');
+      // Break ended — go back to focus
+      setMode(MODES.FOCUS);
+      setIsPaused(false);
+      const focusDuration = getDurationForMode(MODES.FOCUS);
+      setTimeLeft(focusDuration);
+      if (settingsRef.current.autoStartNext) {
+        setTimeout(() => {
+          setIsTaskPromptOpen(true);
+        }, 300);
       }
     }
-  }, [timeLeft, isRunning, mode, notify]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft, isRunning]);
 
-  const handleBreakComplete = useCallback(() => {
-    let nextCycles = cycles;
-    if (mode === MODES.LONG_BREAK) {
-      nextCycles = 0;
-    }
-    
-    setMode(MODES.FOCUS);
-    setCycles(nextCycles);
-    setTimeLeft(getDurationForMode(MODES.FOCUS));
-
-    if (settings.autoStartNext) {
-      // Must give UI a split second to render before triggering next
-      setTimeout(() => {
-        setIsTaskPromptOpen(true); // Always prompts for task on focus
-      }, 300);
-    }
-  }, [mode, cycles, settings.autoStartNext, getDurationForMode]);
-
+  // Called by TaskEvaluation after user submits rating
   const proceedFromEvaluation = useCallback(() => {
-    // UI called this after saving the history item
     setIsEvaluationOpen(false);
-    
-    // Switch to break
-    const nextCycles = cycles + 1;
-    setCycles(nextCycles);
-    
-    if (nextCycles >= settings.cyclesBeforeLongBreak) {
-      setMode(MODES.LONG_BREAK);
-      setTimeLeft(getDurationForMode(MODES.LONG_BREAK));
-    } else {
-      setMode(MODES.SHORT_BREAK);
-      setTimeLeft(getDurationForMode(MODES.SHORT_BREAK));
-    }
 
-    if (settings.autoStartNext) {
+    const newCycles = cyclesRef.current + 1;
+    setCycles(newCycles);
+
+    const s = settingsRef.current;
+    const isLong = newCycles % s.cyclesBeforeLongBreak === 0;
+    const nextMode = isLong ? MODES.LONG_BREAK : MODES.SHORT_BREAK;
+    const breakDuration = getDurationForMode(nextMode);
+
+    setMode(nextMode);
+    setTimeLeft(breakDuration);
+
+    if (s.autoStartNext) {
       setTimeout(() => {
-        endTimeRef.current = Date.now() + (getDurationForMode(nextCycles >= settings.cyclesBeforeLongBreak ? MODES.LONG_BREAK : MODES.SHORT_BREAK) * 1000);
+        endTimeRef.current = Date.now() + breakDuration * 1000;
         setIsRunning(true);
       }, 500);
     }
-  }, [cycles, settings, getDurationForMode]);
+  }, [getDurationForMode]);
 
   const startTimer = useCallback(() => {
-    if (mode === MODES.FOCUS && !currentTask) {
+    const currentMode = modeRef.current;
+    if (currentMode === MODES.FOCUS && !currentTask) {
       setIsTaskPromptOpen(true);
       return;
     }
-    
-    endTimeRef.current = Date.now() + (timeLeft * 1000);
+    setIsPaused(false);
+    setTimeLeft(prev => {
+      endTimeRef.current = Date.now() + prev * 1000;
+      return prev;
+    });
     setIsRunning(true);
-  }, [mode, currentTask, timeLeft]);
+  }, [currentTask]);
 
   const startTaskWithInfo = useCallback((task, category) => {
     setCurrentTask(task);
     setCurrentCategory(category);
     setIsTaskPromptOpen(false);
-    endTimeRef.current = Date.now() + (timeLeft * 1000);
+    setIsPaused(false);
+    setTimeLeft(prev => {
+      endTimeRef.current = Date.now() + prev * 1000;
+      return prev;
+    });
     setIsRunning(true);
-  }, [timeLeft]);
+  }, []);
 
   const pauseTimer = useCallback(() => {
     setIsRunning(false);
-    if (timerRef.current) clearInterval(timerRef.current);
+    setIsPaused(true);
   }, []);
 
   const resumeTimer = useCallback(() => {
-    endTimeRef.current = Date.now() + (timeLeft * 1000);
+    setTimeLeft(prev => {
+      endTimeRef.current = Date.now() + prev * 1000;
+      return prev;
+    });
     setIsRunning(true);
-  }, [timeLeft]);
-
-  const resetTimer = useCallback(() => {
-    setIsRunning(false);
-    if (timerRef.current) clearInterval(timerRef.current);
-    setTimeLeft(getDurationForMode(mode));
-  }, [mode, getDurationForMode]);
+    setIsPaused(false);
+  }, []);
 
   const stopTimer = useCallback(() => {
-    if(window.confirm("Deseja interromper esta sessão? (Ela será contada como incompleta)")) {
+    if (window.confirm('Deseja interromper esta sessão?')) {
       setIsRunning(false);
-      if (timerRef.current) clearInterval(timerRef.current);
-      setMode(MODES.FOCUS);
-      setCycles(0);
+      setIsPaused(false);
       setCurrentTask('');
       setCurrentCategory('');
-      setTimeLeft(getDurationForMode(MODES.FOCUS));
+      const focusDuration = getDurationForMode(MODES.FOCUS);
+      setMode(MODES.FOCUS);
+      setTimeLeft(focusDuration);
     }
   }, [getDurationForMode]);
 
   const switchModeCustom = useCallback((newMode) => {
     setIsRunning(false);
-    if (timerRef.current) clearInterval(timerRef.current);
     setMode(newMode);
     setTimeLeft(getDurationForMode(newMode));
   }, [getDurationForMode]);
 
   const addTime = useCallback((seconds) => {
-    const newTime = timeLeft + seconds;
-    if (isRunning) {
-      endTimeRef.current += (seconds * 1000);
-    }
-    setTimeLeft(Math.max(0, newTime));
-  }, [timeLeft, isRunning]);
+    setTimeLeft(prev => {
+      const next = Math.max(0, prev + seconds);
+      if (isRunningRef.current) {
+        endTimeRef.current += seconds * 1000;
+      }
+      return next;
+    });
+  }, []);
 
   return {
     mode,
     cycles,
     timeLeft,
     isRunning,
+    isPaused,
     startTimer,
     pauseTimer,
     resumeTimer,
-    resetTimer,
     stopTimer,
     switchMode: switchModeCustom,
     addTime,
-    // Anti Procrastination
     currentTask,
     currentCategory,
     isTaskPromptOpen,
