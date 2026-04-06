@@ -6,48 +6,73 @@ export default function Layout({ children, onNavigate, currentTab }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <>
-      <button 
-        className="mobile-menu-btn" 
-        onClick={() => setIsSidebarOpen(true)}
-        style={{
-          position: 'fixed',
-          top: '1rem',
-          left: '1rem',
-          zIndex: 100,
-          background: 'var(--panel)',
-          padding: '0.5rem',
-          borderRadius: 'var(--radius)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
-        }}
-      >
-        <Menu size={24} color="var(--primary)" />
-      </button>
-
+    <div style={{
+      display: 'flex',
+      width: '100vw',
+      minHeight: '100vh',
+      background: 'var(--bg)'
+    }}>
+      {/* Sidebar - always rendered, mobile sliding overlay */}
       <Sidebar 
         isOpen={isSidebarOpen} 
         onClose={() => setIsSidebarOpen(false)} 
         onNavigate={onNavigate}
         currentTab={currentTab}
       />
-      
-      <main style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '2rem 1rem',
-        overflowY: 'auto'
-      }}>
-        {children}
-      </main>
 
-      {/* Global CSS for the mobile button */}
+      {/* Main content area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {/* Mobile top bar */}
+        <div className="mobile-topbar">
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            style={{
+              background: 'var(--panel)',
+              padding: '0.6rem',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <Menu size={22} color="var(--primary)" />
+          </button>
+          <span style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1.1rem' }}>Pomodoro PRO</span>
+          <div style={{ width: 38 }} />
+        </div>
+
+        <main style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          padding: '2rem 1.5rem',
+          overflowY: 'auto'
+        }}>
+          {children}
+        </main>
+      </div>
+
       <style>{`
-        @media (min-width: 901px) {
-          .mobile-menu-btn { display: none; }
+        .mobile-topbar {
+          display: none;
+        }
+        @media (max-width: 768px) {
+          .mobile-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: var(--panel);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+          }
         }
       `}</style>
-    </>
+    </div>
   );
 }
