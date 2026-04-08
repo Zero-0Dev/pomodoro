@@ -16,9 +16,8 @@ export function useTimer() {
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
-  // Anti-procrastination
-  const [currentTask, setCurrentTask] = useState('');
-  const [currentCategory, setCurrentCategory] = useState('');
+  // Anti-procrastination e Task Link
+  const [activeTaskId, setActiveTaskId] = useState(null);
   const [isTaskPromptOpen, setIsTaskPromptOpen] = useState(false);
   const [isEvaluationOpen, setIsEvaluationOpen] = useState(false);
 
@@ -135,7 +134,7 @@ export function useTimer() {
 
   const startTimer = useCallback(() => {
     const currentMode = modeRef.current;
-    if (currentMode === MODES.FOCUS && !currentTask) {
+    if (currentMode === MODES.FOCUS && !activeTaskId) {
       setIsTaskPromptOpen(true);
       return;
     }
@@ -145,11 +144,10 @@ export function useTimer() {
       return prev;
     });
     setIsRunning(true);
-  }, [currentTask]);
+  }, [activeTaskId]);
 
-  const startTaskWithInfo = useCallback((task, category) => {
-    setCurrentTask(task);
-    setCurrentCategory(category);
+  const startTaskWithInfo = useCallback((taskId) => {
+    setActiveTaskId(taskId);
     setIsTaskPromptOpen(false);
     setIsPaused(false);
     setTimeLeft(prev => {
@@ -177,8 +175,7 @@ export function useTimer() {
     if (window.confirm('Deseja interromper esta sessão?')) {
       setIsRunning(false);
       setIsPaused(false);
-      setCurrentTask('');
-      setCurrentCategory('');
+      setActiveTaskId(null);
       const focusDuration = getDurationForMode(MODES.FOCUS);
       setMode(MODES.FOCUS);
       setTimeLeft(focusDuration);
@@ -213,8 +210,8 @@ export function useTimer() {
     stopTimer,
     switchMode: switchModeCustom,
     addTime,
-    currentTask,
-    currentCategory,
+    activeTaskId,
+    setActiveTaskId,
     isTaskPromptOpen,
     setIsTaskPromptOpen,
     startTaskWithInfo,

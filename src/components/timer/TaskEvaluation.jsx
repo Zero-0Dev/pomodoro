@@ -9,9 +9,10 @@ export default function TaskEvaluation({
   task, 
   category, 
   cycles, 
-  mode
+  mode,
+  taskId
 }) {
-  const { addHistoryEntry } = usePomodoro();
+  const { addHistoryEntry, updateTask, tasks, settings } = usePomodoro();
   const [evaluation, setEvaluation] = useState('concluido');
   const [note, setNote] = useState('');
 
@@ -28,6 +29,17 @@ export default function TaskEvaluation({
       note,
       type: mode,
     });
+
+    if (taskId) {
+      const currentTaskData = tasks.find(t => t.id === taskId);
+      if (currentTaskData) {
+        updateTask(taskId, {
+          pomodorosCount: currentTaskData.pomodorosCount + 1,
+          totalTimeSpent: currentTaskData.totalTimeSpent + (settings.pomodoroTime * 60),
+          status: evaluation === 'concluido' ? 'completed' : currentTaskData.status
+        });
+      }
+    }
 
     setNote(''); // reset
     onComplete(); // continues to break

@@ -17,6 +17,47 @@ export const PomodoroProvider = ({ children }) => {
   const [settings, setSettings] = useLocalStorage('pomodoro_settings', DEFAULT_SETTINGS);
   const [history, setHistory] = useLocalStorage('pomodoro_history', []);
   const [categories, setCategories] = useLocalStorage('pomodoro_categories', ['Estudos', 'Trabalho', 'Projeto']);
+  const [tasks, setTasks] = useLocalStorage('pomodoro_tasks', []);
+
+  // Tarefas / Checklist
+  const addTask = (taskData) => {
+    const newTask = {
+      id: Date.now().toString(),
+      text: taskData.text,
+      categoryId: taskData.categoryId || '',
+      status: taskData.status || 'pending', // pending, active, paused, completed
+      createdAt: new Date().toISOString(),
+      startedAt: null,
+      completedAt: null,
+      priority: taskData.priority || 'normal', // baixa, normal, alta
+      pomodorosCount: 0,
+      totalTimeSpent: 0 // in seconds
+    };
+    setTasks(prev => [newTask, ...prev]);
+    return newTask.id;
+  };
+
+  const updateTask = (id, updates) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === id) {
+        const updated = { ...t, ...updates };
+        if (updates.status === 'active' && !t.startedAt) {
+          updated.startedAt = new Date().toISOString();
+        }
+        if (updates.status === 'completed' && !t.completedAt) {
+          updated.completedAt = new Date().toISOString();
+        }
+        return updated;
+      }
+      return t;
+    }));
+  };
+
+  const deleteTask = (id) => {
+    if(confirm("Tem certeza que deseja apagar esta tarefa? Todo o histórico dela será finalizado.")) {
+      setTasks(prev => prev.filter(t => t.id !== id));
+    }
+  };
 
   const addHistoryEntry = (entry) => {
     const newEntry = {
@@ -70,7 +111,11 @@ export const PomodoroProvider = ({ children }) => {
       clearHistory,
       categories,
       addCategory,
-      removeCategory
+      removeCategory,
+      tasks,
+      addTask,
+      updateTask,
+      deleteTask
     }}>
       {children}
     </PomodoroContext.Provider>

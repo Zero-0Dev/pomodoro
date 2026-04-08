@@ -6,6 +6,7 @@ import HistoryTable from './components/history/HistoryTable';
 import Dashboard from './components/charts/Dashboard';
 import CategoriesManager from './components/settings/CategoriesManager';
 import Settings from './components/settings/Settings';
+import TasksManager from './components/tasks/TasksManager';
 import './app.css';
 
 export default function App() {
@@ -14,6 +15,7 @@ export default function App() {
   const renderTab = () => {
     switch(currentTab) {
       case 'timer': return <PomodoroDashboard />;
+      case 'tasks': return <TasksManager />;
       case 'history': return <HistoryTable />;
       case 'charts': return <Dashboard />;
       case 'categories': return <CategoriesManager />;

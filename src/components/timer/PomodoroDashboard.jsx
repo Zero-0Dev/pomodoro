@@ -4,15 +4,20 @@ import TimerDisplay from './TimerDisplay';
 import Controls from './Controls';
 import TaskPrompt from './TaskPrompt';
 import TaskEvaluation from './TaskEvaluation';
+import CompactChecklist from './CompactChecklist';
+import { usePomodoro } from '../../store/PomodoroContext';
 
 export default function PomodoroDashboard() {
+  const { tasks } = usePomodoro();
   const {
     mode, cycles, timeLeft, isRunning, isPaused,
     startTimer, pauseTimer, resumeTimer, stopTimer, switchMode, addTime,
-    currentTask, currentCategory,
+    activeTaskId,
     isTaskPromptOpen, setIsTaskPromptOpen, startTaskWithInfo,
     isEvaluationOpen, proceedFromEvaluation
   } = useTimer();
+
+  const activeTask = tasks.find(t => t.id === activeTaskId);
 
   return (
     <div style={{
@@ -26,7 +31,7 @@ export default function PomodoroDashboard() {
       <TimerDisplay 
         timeLeft={timeLeft} 
         mode={mode} 
-        currentTask={currentTask} 
+        currentTask={activeTask ? activeTask.text : ''} 
       />
       
       <Controls 
@@ -41,9 +46,11 @@ export default function PomodoroDashboard() {
         switchMode={switchMode}
       />
 
-      <div style={{ marginTop: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+      <div style={{ marginTop: '1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
         <p>Ciclos completos: <strong>{cycles}</strong></p>
       </div>
+
+      <CompactChecklist isRunning={isRunning} mode={mode} />
 
       <TaskPrompt 
         isOpen={isTaskPromptOpen}
@@ -54,8 +61,9 @@ export default function PomodoroDashboard() {
       <TaskEvaluation
         isOpen={isEvaluationOpen}
         onComplete={proceedFromEvaluation}
-        task={currentTask}
-        category={currentCategory}
+        task={activeTask ? activeTask.text : ''}
+        category={activeTask ? activeTask.categoryId : ''}
+        taskId={activeTask ? activeTask.id : null}
         cycles={cycles}
         mode={mode}
       />
