@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, Plus, Minus } from 'lucide-react';
+import { Play, Pause, Square, Plus, Minus, PictureInPicture } from 'lucide-react';
 import './Controls.css';
 
 export default function Controls({ 
@@ -10,7 +10,10 @@ export default function Controls({
   resumeTimer,
   stopTimer, 
   addTime,
-  mode 
+  mode,
+  isPipSupported,
+  togglePip,
+  isPipActive
 }) {
   return (
     <div className="controls-container">
@@ -39,6 +42,22 @@ export default function Controls({
         <button className="btn btn-secondary small" onClick={() => addTime(-60)} title="Remover 1 minuto">
           <Minus size={16} /> 1m
         </button>
+        
+        {isPipSupported && (
+          <button 
+            className={`btn btn-secondary small ${isPipActive ? 'active-pip' : ''}`} 
+            onClick={togglePip} 
+            title={isPipActive ? "Fechar Mini Player" : "Abrir Mini Player Flutuante"}
+            style={{ 
+              color: isPipActive ? 'var(--primary)' : 'inherit',
+              borderColor: isPipActive ? 'var(--primary)' : 'inherit',
+              boxShadow: isPipActive ? '0 0 10px rgba(255,0,60,0.3)' : 'none'
+            }}
+          >
+            <PictureInPicture size={18} /> PiP
+          </button>
+        )}
+        
         <button className="btn btn-secondary small" onClick={() => addTime(300)} title="Adicionar 5 minutos">
           <Plus size={16} /> 5m
         </button>

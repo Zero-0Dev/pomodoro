@@ -13,6 +13,29 @@ const CATEGORY_COLORS = [
   '#b142f5', // purple
 ];
 
+// Helper para Forçar Mock Data na apresentação
+const getMockHistory = (categories) => {
+  const mock = [];
+  const today = new Date();
+  
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (6 - i));
+    
+    // Gerar de 2 a 8 pomodoros por dia em categorias variadas
+    const pomodorosNoDia = Math.floor(Math.random() * 6) + 2;
+    for(let j=0; j < pomodorosNoDia; j++) {
+      mock.push({
+        id: `mock-${i}-${j}`,
+        date: d.toISOString(),
+        category: categories[Math.floor(Math.random() * categories.length)] || 'Sem Categoria',
+        evaluation: Math.random() > 0.2 ? 'concluido' : 'parcial'
+      });
+    }
+  }
+  return mock;
+};
+
 export default function Dashboard() {
   const { history, categories } = usePomodoro();
 
@@ -31,7 +54,9 @@ export default function Dashboard() {
       dataMap[day]['Sem Categoria'] = 0;
     });
 
-    history.forEach(session => {
+    const dataToUse = history.length > 0 ? history : getMockHistory(categories);
+
+    dataToUse.forEach(session => {
       const d = new Date(session.date).toDateString();
       if (dataMap[d]) {
         const cat = session.category || 'Sem Categoria';
