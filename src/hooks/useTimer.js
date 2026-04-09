@@ -54,6 +54,23 @@ export function useTimer() {
     }
   }, []);
 
+  // Alerta Psicológico de Pausa
+  useEffect(() => {
+    if (isPaused && settingsRef.current.soundEnabled) {
+      const tickSound = new Audio('https://cdn.pixabay.com/audio/2022/03/15/audio_51de1f0e47.mp3');
+      tickSound.loop = true;
+      tickSound.volume = 0.3; // Low volume
+      const playPromise = tickSound.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => { /* Auto-play was prevented */ });
+      }
+      return () => {
+        tickSound.pause();
+        tickSound.currentTime = 0;
+      };
+    }
+  }, [isPaused]);
+
   // Sync timer display when settings change (only if paused)
   useEffect(() => {
     if (!isRunningRef.current) {

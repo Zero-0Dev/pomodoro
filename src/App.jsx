@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PomodoroProvider } from './store/PomodoroContext';
+import { TimerProvider } from './store/TimerContext';
 import Layout from './components/ui/Layout';
 import PomodoroDashboard from './components/timer/PomodoroDashboard';
 import HistoryTable from './components/history/HistoryTable';
@@ -26,9 +27,11 @@ export default function App() {
 
   return (
     <PomodoroProvider>
-      <Layout currentTab={currentTab} onNavigate={setCurrentTab}>
-        {renderTab()}
-      </Layout>
+      <TimerProvider>
+        <Layout currentTab={currentTab} onNavigate={setCurrentTab}>
+          {renderTab()}
+        </Layout>
+      </TimerProvider>
     </PomodoroProvider>
   );
 }

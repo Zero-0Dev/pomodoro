@@ -1,0 +1,57 @@
+.dashboard-container {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.dashboard-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 2rem;
+  width: 100%;
+}
+
+.dashboard-timer-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Centering the timer components visually similar to before */
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.dashboard-tasks-section {
+  width: 350px;
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border: 1px solid var(--border);
+  /* "Post-it" style hints */
+  position: relative;
+  min-height: 300px;
+}
+
+.dashboard-tasks-section h3 {
+  margin-top: 0;
+  color: var(--text);
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px dashed var(--border);
+  padding-bottom: 0.5rem;
+}
+
+@media (max-width: 850px) {
+  .dashboard-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+  .dashboard-tasks-section {
+    width: 100%;
+    margin-top: 2rem;
+    max-width: 500px;
+  }
+}

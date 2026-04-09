@@ -13,7 +13,7 @@ export default function TaskEvaluation({
   taskId
 }) {
   const { addHistoryEntry, updateTask, tasks, settings } = usePomodoro();
-  const [evaluation, setEvaluation] = useState('concluido');
+  const [evaluation, setEvaluation] = useState('parcial'); // default to parcial so user has to explicitly complete it
   const [note, setNote] = useState('');
 
   if (!isOpen) return null;

@@ -1,18 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
 
 :root {
-  --primary: #ff4757;
-  --primary-hover: #ff6b81;
-  --bg: #0f0f0f;
-  --panel: #1a1a1a;
-  --panel-light: #252525;
-  --border: #333333;
-  --text: #f1f2f6;
-  --text-muted: #a4b0be;
-  --success: #2ed573;
-  --danger: #ff4757;
-  --radius: 12px;
-  --radius-lg: 24px;
+  /* Cyberpunk Palette */
+  --primary: #ff003c;
+  --primary-hover: #00f0ff;
+  --bg: #050505;
+  --panel: #0d0d12;
+  --panel-light: #151520;
+  --border: #232338;
+  --text: #e0f0ff;
+  --text-muted: #708090;
+  --success: #39ff14;
+  --danger: #ff003c;
+  --warning: #fcee0a;
+  --focus-glow: rgba(255, 0, 60, 0.4);
+  --border-glow: 0 0 10px rgba(0, 240, 255, 0.3);
+  --radius: 4px; /* Sharper edges in cyberpunk */
+  --radius-lg: 8px;
 }
 
 * {

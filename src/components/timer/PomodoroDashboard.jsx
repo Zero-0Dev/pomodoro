@@ -1,11 +1,13 @@
 import React from 'react';
-import { useTimer, MODES } from '../../hooks/useTimer';
+import { MODES } from '../../hooks/useTimer';
+import { useTimerContext } from '../../store/TimerContext';
 import TimerDisplay from './TimerDisplay';
 import Controls from './Controls';
 import TaskPrompt from './TaskPrompt';
 import TaskEvaluation from './TaskEvaluation';
 import CompactChecklist from './CompactChecklist';
 import { usePomodoro } from '../../store/PomodoroContext';
+import './PomodoroDashboard.css';
 
 export default function PomodoroDashboard() {
   const { tasks } = usePomodoro();
@@ -15,42 +17,45 @@ export default function PomodoroDashboard() {
     activeTaskId,
     isTaskPromptOpen, setIsTaskPromptOpen, startTaskWithInfo,
     isEvaluationOpen, proceedFromEvaluation
-  } = useTimer();
+  } = useTimerContext();
 
   const activeTask = tasks.find(t => t.id === activeTaskId);
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      width: '100%',
-      maxWidth: '500px',
-      margin: 'auto'
-    }}>
-      <TimerDisplay 
-        timeLeft={timeLeft} 
-        mode={mode} 
-        currentTask={activeTask ? activeTask.text : ''} 
-      />
-      
-      <Controls 
-        isRunning={isRunning}
-        isPaused={isPaused}
-        mode={mode}
-        startTimer={startTimer}
-        pauseTimer={pauseTimer}
-        resumeTimer={resumeTimer}
-        stopTimer={stopTimer}
-        addTime={addTime}
-        switchMode={switchMode}
-      />
+    <div className="dashboard-container">
+      <div className="dashboard-layout">
+        
+        {/* Lado Esquerdo: Timer Principal */}
+        <div className="dashboard-timer-section">
+          <TimerDisplay 
+            timeLeft={timeLeft} 
+            mode={mode} 
+            currentTask={activeTask ? activeTask.text : ''} 
+          />
+          
+          <Controls 
+            isRunning={isRunning}
+            isPaused={isPaused}
+            mode={mode}
+            startTimer={startTimer}
+            pauseTimer={pauseTimer}
+            resumeTimer={resumeTimer}
+            stopTimer={stopTimer}
+            addTime={addTime}
+            switchMode={switchMode}
+          />
 
-      <div style={{ marginTop: '1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-        <p>Ciclos completos: <strong>{cycles}</strong></p>
+          <div style={{ marginTop: '1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <p>Ciclos completos: <strong>{cycles}</strong></p>
+          </div>
+        </div>
+
+        {/* Lado Direito: Tarefas Fixadas (Post-it style) */}
+        <div className="dashboard-tasks-section">
+          <CompactChecklist isRunning={isRunning} mode={mode} />
+        </div>
+
       </div>
-
-      <CompactChecklist isRunning={isRunning} mode={mode} />
 
       <TaskPrompt 
         isOpen={isTaskPromptOpen}
