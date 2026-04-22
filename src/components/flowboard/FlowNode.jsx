@@ -1,17 +1,21 @@
 import React, { useRef, useEffect, useCallback } from 'react';
-import { Trash2, ArrowRightCircle, Link } from 'lucide-react';
+import { Trash2, Maximize2 } from 'lucide-react';
 
 export default function FlowNode({
   node,
+  isDragging,
+  isConnFrom,
+  isConnTarget,
+  isPendingConn,
   onDragStart,
   onUpdate,
   onDelete,
-  onConvert,
-  isDragging,
+  onOpenDetail,
+  onConnHandleDown,
+  onNodeClick,
 }) {
   const textareaRef = useRef(null);
 
-  // Auto-resize textarea
   const resize = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -19,21 +23,26 @@ export default function FlowNode({
     el.style.height = el.scrollHeight + 'px';
   }, []);
 
-  useEffect(() => {
-    resize();
-  }, [node.text, resize]);
+  useEffect(() => { resize(); }, [node.text, resize]);
 
   const handleTextChange = (e) => {
     onUpdate(node.id, { text: e.target.value });
     resize();
   };
 
-  const handleMouseDown = (e) => {
-    // Only start drag from the handle area
-    if (e.target.closest('.flow-node-textarea') || e.target.closest('.flow-node-action-btn')) {
-      return;
-    }
+  // Start node drag from the handle bar
+  const handleGripMouseDown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     onDragStart(e, node.id);
+  };
+
+  // Click on node body (for receiving connections)
+  const handleNodeClick = (e) => {
+    if (isPendingConn) {
+      e.stopPropagation();
+      onNodeClick(node.id);
+    }
   };
 
   const formatDate = (iso) => {
@@ -42,61 +51,76 @@ export default function FlowNode({
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   };
 
+  const detailsPreview = node.details?.trim().split('\n')[0] || '';
+
   return (
     <div
-      className={`flow-node${isDragging ? ' is-dragging' : ''}${node.linkedTaskId ? ' is-linked' : ''}`}
+      className={[
+        'flow-node',
+        isDragging ? 'is-dragging' : '',
+        isConnTarget ? 'conn-target-hover' : '',
+      ].join(' ')}
       style={{ left: node.x, top: node.y }}
-      onMouseDown={handleMouseDown}
+      onClick={handleNodeClick}
     >
-      {/* Drag handle */}
-      <div className="flow-node-handle">
-        <div className="flow-node-handle-dots">
+      {/* Drag grip */}
+      <div className="flow-node-handle" onMouseDown={handleGripMouseDown}>
+        <div className="flow-node-grip">
           <span /><span /><span />
           <span /><span /><span />
         </div>
-
         <div className="flow-node-actions">
-          {!node.linkedTaskId && (
-            <button
-              className="flow-node-action-btn convert"
-              title="Converter em tarefa"
-              onClick={(e) => { e.stopPropagation(); onConvert(node); }}
-            >
-              <ArrowRightCircle size={14} />
-            </button>
-          )}
           <button
-            className="flow-node-action-btn delete"
+            className="flow-node-btn expand"
+            title="Abrir notas internas"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onOpenDetail(node.id); }}
+          >
+            <Maximize2 size={13} />
+          </button>
+          <button
+            className="flow-node-btn delete"
             title="Excluir bloco"
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => { e.stopPropagation(); onDelete(node.id); }}
           >
-            <Trash2 size={14} />
+            <Trash2 size={13} />
           </button>
         </div>
       </div>
 
-      {/* Text body */}
-      <div className="flow-node-body">
+      {/* Text area */}
+      <div className="flow-node-body" onMouseDown={(e) => e.stopPropagation()}>
         <textarea
           ref={textareaRef}
           className="flow-node-textarea"
           value={node.text}
           onChange={handleTextChange}
-          placeholder="Digite sua ideia…"
+          placeholder="Título da ideia…"
           rows={2}
-          onMouseDown={(e) => e.stopPropagation()}
         />
       </div>
 
       {/* Footer */}
       <div className="flow-node-footer">
         <span className="flow-node-date">{formatDate(node.createdAt)}</span>
-        {node.linkedTaskId && (
-          <span className="flow-node-linked-badge">
-            <Link size={10} /> tarefa
+        {detailsPreview && (
+          <span className="flow-node-details-hint" title={detailsPreview}>
+            {detailsPreview}
           </span>
         )}
       </div>
+
+      {/* Connection output handle (right edge) */}
+      <div
+        className={`flow-node-conn-handle${isConnFrom ? ' is-from' : ''}`}
+        title="Conectar a outro bloco"
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          onConnHandleDown(e, node.id);
+        }}
+      />
     </div>
   );
 }

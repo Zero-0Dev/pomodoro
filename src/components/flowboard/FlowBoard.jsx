@@ -1,48 +1,69 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, X } from 'lucide-react';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { usePomodoro } from '../../store/PomodoroContext';
 import FlowToolbar from './FlowToolbar';
 import FlowNode from './FlowNode';
 import './FlowBoard.css';
 
-// ─── Convert-to-Task Modal ─────────────────────────────────────────────────
-function ConvertModal({ node, categories, onConfirm, onClose }) {
-  const [priority, setPriority] = useState('normal');
-  const [categoryId, setCategoryId] = useState('');
+// ─── Constants ────────────────────────────────────────────────────────────────
+const NODE_WIDTH = 220;
+const NODE_CONN_Y = 55; // vertical offset for connection handle center
+const MIN_SCALE = 0.2;
+const MAX_SCALE = 2.5;
+const SCALE_STEP = 0.15;
 
-  const handleConfirm = () => {
-    onConfirm(node, { priority, categoryId });
+// Build SVG bezier path between two points
+function buildPath(x1, y1, x2, y2) {
+  const dx = Math.abs(x2 - x1);
+  const cx = Math.min(80, dx * 0.6);
+  return `M ${x1} ${y1} C ${x1 + cx} ${y1} ${x2 - cx} ${y2} ${x2} ${y2}`;
+}
+
+// ─── Detail Modal ────────────────────────────────────────────────────────────
+function DetailModal({ node, onSave, onClose }) {
+  const [text, setText] = useState(node.text);
+  const [details, setDetails] = useState(node.details || '');
+
+  const handleSave = () => {
+    onSave(node.id, { text, details });
     onClose();
   };
 
+  const formatDate = (iso) => {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  };
+
   return (
-    <div className="flow-convert-modal-overlay" onClick={onClose}>
-      <div className="flow-convert-modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Converter em Tarefa</h3>
-        <p>O texto do bloco será usado como nome da tarefa.</p>
-
-        <label>Categoria</label>
-        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-          <option value="">Sem Categoria</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-
-        <label>Prioridade</label>
-        <select value={priority} onChange={(e) => setPriority(e.target.value)}>
-          <option value="low">Baixa</option>
-          <option value="normal">Normal</option>
-          <option value="high">Alta</option>
-        </select>
-
-        <div className="flow-convert-modal-actions">
-          <button className="flow-btn flow-btn-muted" onClick={onClose}>
-            Cancelar
+    <div className="flow-detail-overlay" onClick={handleSave}>
+      <div className="flow-detail-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="flow-detail-header">
+          <input
+            className="flow-detail-title-input"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Título da ideia…"
+            autoFocus
+          />
+          <button className="flow-detail-close-btn" onClick={handleSave} title="Salvar e fechar">
+            <X size={16} />
           </button>
-          <button className="flow-btn flow-btn-primary" onClick={handleConfirm}>
-            Converter
+        </div>
+
+        <textarea
+          className="flow-detail-notes"
+          value={details}
+          onChange={(e) => setDetails(e.target.value)}
+          placeholder="Adicione notas, detalhes, links, referências…"
+        />
+
+        <div className="flow-detail-footer">
+          <span className="flow-detail-date">{formatDate(node.createdAt)}</span>
+          <button className="flow-btn flow-btn-primary" onClick={handleSave}>
+            Salvar
           </button>
         </div>
       </div>
@@ -50,80 +71,188 @@ function ConvertModal({ node, categories, onConfirm, onClose }) {
   );
 }
 
-// ─── Main FlowBoard ───────────────────────────────────────────────────────
+// ─── Main FlowBoard ──────────────────────────────────────────────────────────
 export default function FlowBoard() {
+  // Persisted data
   const [nodes, setNodes] = useLocalStorage('pomodoro_flow_nodes', []);
+  const [connections, setConnections] = useLocalStorage('pomodoro_flow_connections', []);
   const [showGrid, setShowGrid] = useLocalStorage('pomodoro_flow_grid', true);
-  const [convertTarget, setConvertTarget] = useState(null);
-  const [dragging, setDragging] = useState(null); // { nodeId, offsetX, offsetY }
+
+  // Canvas transform
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 40, y: 40 });
+
+  // Interaction modes (mutually exclusive)
+  const [nodeDrag, setNodeDrag] = useState(null);    // { nodeId, startCanvasX, startCanvasY, startNodeX, startNodeY }
+  const [canvasPan, setCanvasPan] = useState(null);  // { startClientX, startClientY, startOffX, startOffY }
+  const [pendingConn, setPendingConn] = useState(null); // { fromId }
+  const [cursorCanvas, setCursorCanvas] = useState({ x: 0, y: 0 });
+
+  // UI state
+  const [detailNodeId, setDetailNodeId] = useState(null);
+  const [hoveredTarget, setHoveredTarget] = useState(null); // nodeId when hovering while connecting
 
   const canvasRef = useRef(null);
-  const { addTask, categories } = usePomodoro();
 
-  // ── Drag ──────────────────────────────────────────────────────────────
-  const handleDragStart = useCallback((e, nodeId) => {
-    e.preventDefault();
-    const node = nodes.find((n) => n.id === nodeId);
-    if (!node) return;
+  // ── Coordinate helpers ──────────────────────────────────────────────────
+  const clientToCanvas = useCallback((cx, cy) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return {
+      x: (cx - rect.left - offset.x) / scale,
+      y: (cy - rect.top - offset.y) / scale,
+    };
+  }, [offset, scale]);
 
-    const canvasRect = canvasRef.current?.getBoundingClientRect();
-    if (!canvasRect) return;
+  // ── Global mouse events ─────────────────────────────────────────────────
+  useEffect(() => {
+    const onMove = (e) => {
+      if (nodeDrag) {
+        const pos = clientToCanvas(e.clientX, e.clientY);
+        const nx = Math.max(0, pos.x - nodeDrag.startCanvasX + nodeDrag.startNodeX);
+        const ny = Math.max(0, pos.y - nodeDrag.startCanvasY + nodeDrag.startNodeY);
+        setNodes((prev) =>
+          prev.map((n) => (n.id === nodeDrag.nodeId ? { ...n, x: nx, y: ny } : n))
+        );
+      } else if (canvasPan) {
+        setOffset({
+          x: canvasPan.startOffX + (e.clientX - canvasPan.startClientX),
+          y: canvasPan.startOffY + (e.clientY - canvasPan.startClientY),
+        });
+      }
 
-    setDragging({
-      nodeId,
-      offsetX: e.clientX - canvasRect.left - node.x,
-      offsetY: e.clientY - canvasRect.top - node.y,
-    });
-  }, [nodes]);
+      if (pendingConn) {
+        setCursorCanvas(clientToCanvas(e.clientX, e.clientY));
+      }
+    };
 
-  const handleMouseMove = useCallback((e) => {
-    if (!dragging) return;
-    const canvasRect = canvasRef.current?.getBoundingClientRect();
-    if (!canvasRect) return;
+    const onUp = () => {
+      setNodeDrag(null);
+      setCanvasPan(null);
+    };
 
-    const rawX = e.clientX - canvasRect.left - dragging.offsetX;
-    const rawY = e.clientY - canvasRect.top - dragging.offsetY;
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [nodeDrag, canvasPan, pendingConn, clientToCanvas, setNodes]);
 
-    const x = Math.max(0, Math.min(rawX, canvasRect.width - 220));
-    const y = Math.max(0, Math.min(rawY, canvasRect.height - 110));
-
-    setNodes((prev) =>
-      prev.map((n) => (n.id === dragging.nodeId ? { ...n, x, y } : n))
-    );
-  }, [dragging, setNodes]);
-
-  const handleMouseUp = useCallback(() => {
-    setDragging(null);
+  // ── Wheel zoom ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const factor = e.deltaY < 0 ? 1.1 : 0.91;
+      setScale((prev) => {
+        const next = Math.max(MIN_SCALE, Math.min(MAX_SCALE, prev * factor));
+        const ratio = next / prev;
+        setOffset((off) => ({
+          x: cx - ratio * (cx - off.x),
+          y: cy - ratio * (cy - off.y),
+        }));
+        return next;
+      });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
   }, []);
 
-  useEffect(() => {
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [handleMouseMove, handleMouseUp]);
+  // ── Canvas background mousedown → pan ───────────────────────────────────
+  const handleCanvasBgMouseDown = (e) => {
+    if (pendingConn) {
+      // Cancel connection on background click
+      setPendingConn(null);
+      setHoveredTarget(null);
+      return;
+    }
+    if (e.button === 0) {
+      setCanvasPan({
+        startClientX: e.clientX,
+        startClientY: e.clientY,
+        startOffX: offset.x,
+        startOffY: offset.y,
+      });
+    }
+  };
 
-  // ── Node CRUD ─────────────────────────────────────────────────────────
+  // ── Node drag start ─────────────────────────────────────────────────────
+  const handleNodeDragStart = useCallback((e, nodeId) => {
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+    const pos = clientToCanvas(e.clientX, e.clientY);
+    setNodeDrag({
+      nodeId,
+      startCanvasX: pos.x,
+      startCanvasY: pos.y,
+      startNodeX: node.x,
+      startNodeY: node.y,
+    });
+  }, [nodes, clientToCanvas]);
+
+  // ── Connection handle mousedown → start connection ──────────────────────
+  const handleConnHandleDown = useCallback((e, fromId) => {
+    const pos = clientToCanvas(e.clientX, e.clientY);
+    setPendingConn({ fromId });
+    setCursorCanvas(pos);
+    setHoveredTarget(null);
+  }, [clientToCanvas]);
+
+  // ── Node click when in connection mode → complete connection ────────────
+  const handleNodeClick = useCallback((toId) => {
+    if (!pendingConn || toId === pendingConn.fromId) {
+      setPendingConn(null);
+      setHoveredTarget(null);
+      return;
+    }
+    // Avoid duplicate connections
+    const exists = connections.some(
+      (c) =>
+        (c.fromId === pendingConn.fromId && c.toId === toId) ||
+        (c.fromId === toId && c.toId === pendingConn.fromId)
+    );
+    if (!exists) {
+      setConnections((prev) => [
+        ...prev,
+        { id: Date.now().toString(), fromId: pendingConn.fromId, toId },
+      ]);
+    }
+    setPendingConn(null);
+    setHoveredTarget(null);
+  }, [pendingConn, connections, setConnections]);
+
+  // ── Delete connection ───────────────────────────────────────────────────
+  const deleteConnection = useCallback((connId) => {
+    setConnections((prev) => prev.filter((c) => c.id !== connId));
+  }, [setConnections]);
+
+  // ── Node CRUD ───────────────────────────────────────────────────────────
   const addNode = () => {
-    const canvasRect = canvasRef.current?.getBoundingClientRect();
-    const canvasW = canvasRect ? canvasRect.width : 800;
-    const canvasH = canvasRect ? canvasRect.height : 500;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    const cw = rect ? rect.width : 800;
+    const ch = rect ? rect.height : 500;
 
-    // Scatter new nodes with a bit of randomness to avoid stacking
-    const x = Math.max(20, Math.min(canvasW - 240, 60 + (nodes.length * 30) % (canvasW - 280)));
-    const y = Math.max(20, Math.min(canvasH - 130, 40 + (nodes.length * 25) % (canvasH - 150)));
+    // Scatter with slight offset per count
+    const base = (nodes.length % 6) * 40;
+    const cx = (cw / 2 - offset.x) / scale - NODE_WIDTH / 2 + (base - 60);
+    const cy = (ch / 2 - offset.y) / scale - 60 + base;
 
-    const newNode = {
-      id: Date.now().toString(),
-      text: '',
-      x,
-      y,
-      createdAt: new Date().toISOString(),
-      linkedTaskId: null,
-    };
-    setNodes((prev) => [...prev, newNode]);
+    setNodes((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        text: '',
+        details: '',
+        x: Math.max(10, cx),
+        y: Math.max(10, cy),
+        createdAt: new Date().toISOString(),
+      },
+    ]);
   };
 
   const updateNode = useCallback((id, changes) => {
@@ -131,86 +260,175 @@ export default function FlowBoard() {
   }, [setNodes]);
 
   const deleteNode = (id) => {
-    if (window.confirm('Remover este bloco de ideia?')) {
-      setNodes((prev) => prev.filter((n) => n.id !== id));
-    }
+    if (!window.confirm('Remover este bloco?')) return;
+    setNodes((prev) => prev.filter((n) => n.id !== id));
+    setConnections((prev) => prev.filter((c) => c.fromId !== id && c.toId !== id));
   };
 
   const clearAll = () => {
     if (nodes.length === 0) return;
-    if (window.confirm(`Remover todos os ${nodes.length} bloco(s)?`)) {
-      setNodes([]);
-    }
+    if (!window.confirm(`Remover todos os ${nodes.length} bloco(s) e conexões?`)) return;
+    setNodes([]);
+    setConnections([]);
   };
 
-  // ── Convert to Task ───────────────────────────────────────────────────
-  const handleConvertConfirm = (node, { priority, categoryId }) => {
-    const taskId = addTask({
-      text: node.text || 'Ideia do Flow Board',
-      categoryId,
-      priority,
-      status: 'pending',
+  // ── Zoom controls ────────────────────────────────────────────────────────
+  const zoomBy = (delta) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    const cx = rect ? rect.width / 2 : 400;
+    const cy = rect ? rect.height / 2 : 300;
+    setScale((prev) => {
+      const next = Math.max(MIN_SCALE, Math.min(MAX_SCALE, prev + delta));
+      const ratio = next / prev;
+      setOffset((off) => ({
+        x: cx - ratio * (cx - off.x),
+        y: cy - ratio * (cy - off.y),
+      }));
+      return next;
     });
-    updateNode(node.id, { linkedTaskId: taskId });
   };
+
+  const zoomReset = () => { setScale(1); setOffset({ x: 40, y: 40 }); };
+
+  // ── Detail modal ─────────────────────────────────────────────────────────
+  const detailNode = nodes.find((n) => n.id === detailNodeId) || null;
+
+  // ── Pending connection SVG line ──────────────────────────────────────────
+  const pendingFrom = pendingConn ? nodes.find((n) => n.id === pendingConn.fromId) : null;
+
+  // Cursor classes for canvas
+  const canvasClass = [
+    'flowboard-canvas',
+    canvasPan ? 'is-panning' : '',
+    pendingConn ? 'is-connecting' : '',
+  ].join(' ');
 
   return (
     <div className="flowboard-wrapper">
       {/* Header */}
       <header className="flowboard-header">
         <h1>Flow Board</h1>
-        <p>Organize seus pensamentos e ideias em blocos visuais arrastáveis.</p>
+        <p>
+          Organize seus pensamentos em blocos visuais.{' '}
+          {pendingConn && (
+            <span style={{ color: 'var(--primary-hover)', fontWeight: 600 }}>
+              Clique em outro bloco para conectar • ESC para cancelar
+            </span>
+          )}
+        </p>
       </header>
 
       {/* Toolbar */}
       <FlowToolbar
         nodeCount={nodes.length}
         showGrid={showGrid}
+        scale={scale}
         onAddNode={addNode}
         onClearAll={clearAll}
         onToggleGrid={() => setShowGrid((v) => !v)}
+        onZoomIn={() => zoomBy(SCALE_STEP)}
+        onZoomOut={() => zoomBy(-SCALE_STEP)}
+        onZoomReset={zoomReset}
       />
 
       {/* Canvas */}
       <div
         id="flowboard-canvas"
         ref={canvasRef}
-        className={`flowboard-canvas${dragging ? ' dragging-canvas' : ''}`}
+        className={canvasClass}
+        onMouseDown={handleCanvasBgMouseDown}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') { setPendingConn(null); setHoveredTarget(null); }
+        }}
+        tabIndex={0}
       >
-        {/* Grid */}
-        {showGrid && <div className="flowboard-grid" />}
+        {/* Transformable inner layer */}
+        <div
+          className="flowboard-inner"
+          style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}
+        >
+          {/* Grid */}
+          {showGrid && <div className="flowboard-grid" />}
 
-        {/* Empty state */}
+          {/* SVG connections */}
+          <svg
+            className="flowboard-svg"
+            width={6000}
+            height={6000}
+            style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible' }}
+          >
+            {/* Existing connections */}
+            {connections.map((conn) => {
+              const from = nodes.find((n) => n.id === conn.fromId);
+              const to   = nodes.find((n) => n.id === conn.toId);
+              if (!from || !to) return null;
+              const x1 = from.x + NODE_WIDTH;
+              const y1 = from.y + NODE_CONN_Y;
+              const x2 = to.x;
+              const y2 = to.y + NODE_CONN_Y;
+              const d = buildPath(x1, y1, x2, y2);
+              return (
+                <g key={conn.id}>
+                  {/* Wide transparent hit area */}
+                  <path
+                    d={d}
+                    className="flow-conn-hit"
+                    onClick={(e) => { e.stopPropagation(); deleteConnection(conn.id); }}
+                    title="Clique para remover conexão"
+                  />
+                  <path d={d} className="flow-conn-path" />
+                </g>
+              );
+            })}
+
+            {/* Pending connection line */}
+            {pendingFrom && (
+              <path
+                d={buildPath(
+                  pendingFrom.x + NODE_WIDTH,
+                  pendingFrom.y + NODE_CONN_Y,
+                  cursorCanvas.x,
+                  cursorCanvas.y,
+                )}
+                className="flow-conn-pending"
+              />
+            )}
+          </svg>
+
+          {/* Nodes */}
+          {nodes.map((node) => (
+            <FlowNode
+              key={node.id}
+              node={node}
+              isDragging={nodeDrag?.nodeId === node.id}
+              isConnFrom={pendingConn?.fromId === node.id}
+              isConnTarget={hoveredTarget === node.id}
+              isPendingConn={!!pendingConn && pendingConn.fromId !== node.id}
+              onDragStart={handleNodeDragStart}
+              onUpdate={updateNode}
+              onDelete={deleteNode}
+              onOpenDetail={setDetailNodeId}
+              onConnHandleDown={handleConnHandleDown}
+              onNodeClick={handleNodeClick}
+            />
+          ))}
+        </div>
+
+        {/* Empty state (outside inner to keep it centered) */}
         {nodes.length === 0 && (
           <div className="flowboard-empty">
-            <div className="flowboard-empty-icon">
-              <Lightbulb size={64} color="var(--primary-hover)" />
-            </div>
+            <Lightbulb size={56} color="var(--primary-hover)" style={{ opacity: 0.15 }} />
             <p>Clique em "Nova Ideia" para começar</p>
           </div>
         )}
-
-        {/* Nodes */}
-        {nodes.map((node) => (
-          <FlowNode
-            key={node.id}
-            node={node}
-            isDragging={dragging?.nodeId === node.id}
-            onDragStart={handleDragStart}
-            onUpdate={updateNode}
-            onDelete={deleteNode}
-            onConvert={setConvertTarget}
-          />
-        ))}
       </div>
 
-      {/* Convert modal */}
-      {convertTarget && (
-        <ConvertModal
-          node={convertTarget}
-          categories={categories}
-          onConfirm={handleConvertConfirm}
-          onClose={() => setConvertTarget(null)}
+      {/* Detail modal */}
+      {detailNode && (
+        <DetailModal
+          node={detailNode}
+          onSave={updateNode}
+          onClose={() => setDetailNodeId(null)}
         />
       )}
     </div>
