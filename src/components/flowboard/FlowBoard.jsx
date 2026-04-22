@@ -1,16 +1,17 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Lightbulb, X } from 'lucide-react';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { getNodeColor } from './flowColors';
 import FlowToolbar from './FlowToolbar';
 import FlowNode from './FlowNode';
 import './FlowBoard.css';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const NODE_WIDTH = 220;
-const NODE_CONN_Y = 55; // vertical offset for connection handle center
-const MIN_SCALE = 0.2;
-const MAX_SCALE = 2.5;
-const SCALE_STEP = 0.15;
+const NODE_WIDTH  = 248;
+const NODE_CONN_Y = 55;
+const MIN_SCALE   = 0.2;
+const MAX_SCALE   = 2.5;
+const SCALE_STEP  = 0.15;
 
 // Build SVG bezier path between two points
 function buildPath(x1, y1, x2, y2) {
@@ -23,6 +24,7 @@ function buildPath(x1, y1, x2, y2) {
 function DetailModal({ node, onSave, onClose }) {
   const [text, setText] = useState(node.text);
   const [details, setDetails] = useState(node.details || '');
+  const color = getNodeColor(node.color);
 
   const handleSave = () => {
     onSave(node.id, { text, details });
@@ -40,6 +42,9 @@ function DetailModal({ node, onSave, onClose }) {
   return (
     <div className="flow-detail-overlay" onClick={handleSave}>
       <div className="flow-detail-modal" onClick={(e) => e.stopPropagation()}>
+        {/* Colored accent bar matching node color */}
+        <div className="flow-detail-color-bar" style={{ background: color.accent }} />
+
         <div className="flow-detail-header">
           <input
             className="flow-detail-title-input"
@@ -47,6 +52,7 @@ function DetailModal({ node, onSave, onClose }) {
             onChange={(e) => setText(e.target.value)}
             placeholder="Título da ideia…"
             autoFocus
+            style={{ caretColor: color.accent }}
           />
           <button className="flow-detail-close-btn" onClick={handleSave} title="Salvar e fechar">
             <X size={16} />
@@ -58,11 +64,12 @@ function DetailModal({ node, onSave, onClose }) {
           value={details}
           onChange={(e) => setDetails(e.target.value)}
           placeholder="Adicione notas, detalhes, links, referências…"
+          style={{ caretColor: color.accent }}
         />
 
         <div className="flow-detail-footer">
           <span className="flow-detail-date">{formatDate(node.createdAt)}</span>
-          <button className="flow-btn flow-btn-primary" onClick={handleSave}>
+          <button className="flow-btn flow-btn-primary" style={{ borderColor: color.accent, color: color.accent }} onClick={handleSave}>
             Salvar
           </button>
         </div>
@@ -248,6 +255,7 @@ export default function FlowBoard() {
         id: Date.now().toString(),
         text: '',
         details: '',
+        color: 'default',
         x: Math.max(10, cx),
         y: Math.max(10, cy),
         createdAt: new Date().toISOString(),
