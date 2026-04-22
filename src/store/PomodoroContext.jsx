@@ -8,6 +8,7 @@ export const DEFAULT_SETTINGS = {
   shortBreakTime: 5,
   longBreakTime: 15,
   cyclesBeforeLongBreak: 4,
+  dailyGoal: 8,
   autoStartNext: false,
   soundEnabled: true,
   notificationsEnabled: true

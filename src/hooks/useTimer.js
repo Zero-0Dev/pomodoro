@@ -215,6 +215,38 @@ export function useTimer() {
     });
   }, []);
 
+  const skipCurrentMode = useCallback(() => {
+    setIsRunning(false);
+    setIsPaused(false);
+    
+    if (modeRef.current === MODES.FOCUS) {
+      // Se estava em foco, pula pra avaliação como se tivesse completado o tempo
+      setIsEvaluationOpen(true);
+    } else {
+      // Se estava em pausa, pula de volta pro foco
+      setMode(MODES.FOCUS);
+      setTimeLeft(getDurationForMode(MODES.FOCUS));
+    }
+  }, [getDurationForMode]);
+
+  const resetTimer = useCallback(() => {
+    setIsRunning(false);
+    setIsPaused(false);
+    setTimeLeft(getDurationForMode(modeRef.current));
+  }, [getDurationForMode]);
+
+  useEffect(() => {
+    const minutes = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+    const seconds = (timeLeft % 60).toString().padStart(2, '0');
+    let modeText = 'Pomodoro';
+    if (mode === MODES.SHORT_BREAK) modeText = 'Pausa';
+    if (mode === MODES.LONG_BREAK) modeText = 'Pausa Longa';
+    document.title = `(${minutes}:${seconds}) ${modeText}`;
+    
+    // Cleanup ao desmontar
+    return () => { document.title = 'Pomodoro'; };
+  }, [timeLeft, mode]);
+
   return {
     mode,
     cycles,
@@ -227,6 +259,8 @@ export function useTimer() {
     stopTimer,
     switchMode: switchModeCustom,
     addTime,
+    skipCurrentMode,
+    resetTimer,
     activeTaskId,
     setActiveTaskId,
     isTaskPromptOpen,

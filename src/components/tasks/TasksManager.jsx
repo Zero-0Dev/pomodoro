@@ -110,10 +110,10 @@ export default function TasksManager() {
       {/* Filtros */}
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
         {[
-          { id: 'all', label: 'Todas', count: tasks.length },
-          { id: 'active', label: 'Em Foco', count: tasks.filter(t => t.status === 'active').length },
-          { id: 'pending', label: 'Pendentes', count: tasks.filter(t => t.status === 'pending').length },
-          { id: 'completed', label: 'Concluídas', count: tasks.filter(t => t.status === 'completed').length }
+          { id: 'all', label: 'Todas', count: tasks.length, color: 'var(--primary)', glow: '0 0 10px var(--primary)' },
+          { id: 'active', label: 'Em Foco', count: tasks.filter(t => t.status === 'active').length, color: 'var(--success)', glow: '0 0 10px var(--success)' },
+          { id: 'pending', label: 'Pendentes', count: tasks.filter(t => t.status === 'pending').length, color: 'var(--warning)', glow: '0 0 10px var(--warning)' },
+          { id: 'completed', label: 'Concluídas', count: tasks.filter(t => t.status === 'completed').length, color: 'var(--text-muted)', glow: 'none' }
         ].map(filter => (
           <button 
             key={filter.id}
@@ -121,16 +121,16 @@ export default function TasksManager() {
             style={{
               padding: '0.6rem 1.2rem',
               borderRadius: 'var(--radius)',
-              background: filterMode === filter.id ? 'var(--primary-hover)' : 'rgba(0,0,0,0.5)',
-              color: filterMode === filter.id ? '#000' : 'var(--primary-hover)',
-              border: `1px solid ${filterMode === filter.id ? 'var(--primary-hover)' : 'var(--border)'}`,
-              boxShadow: filterMode === filter.id ? 'var(--border-glow)' : 'none',
+              background: filterMode === filter.id ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.4)',
+              color: filterMode === filter.id ? filter.color : 'var(--text-muted)',
+              border: `1px solid ${filterMode === filter.id ? filter.color : 'var(--border)'}`,
+              boxShadow: filterMode === filter.id ? filter.glow : 'none',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem',
               cursor: 'pointer',
               fontWeight: 600,
-              transition: 'all 0.2s ease',
+              transition: 'all 0.3s ease',
               whiteSpace: 'nowrap',
               textTransform: 'uppercase',
               letterSpacing: '1px'
@@ -138,11 +138,12 @@ export default function TasksManager() {
           >
             {filter.label} 
             <span style={{ 
-              background: filterMode === filter.id ? 'rgba(0,0,0,0.5)' : 'var(--panel-light)', 
-              color: filterMode === filter.id ? 'var(--primary-hover)' : 'var(--text-muted)',
+              background: filterMode === filter.id ? filter.color : 'var(--panel-light)', 
+              color: filterMode === filter.id ? '#000' : 'var(--text-muted)',
               padding: '2px 8px', 
               borderRadius: '10px', 
               fontSize: '0.75rem',
+              fontWeight: 'bold',
               border: '1px solid var(--border)'
             }}>{filter.count}</span>
           </button>

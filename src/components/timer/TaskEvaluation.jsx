@@ -46,8 +46,8 @@ export default function TaskEvaluation({
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content card">
+    <div className="modal-overlay celebration-overlay">
+      <div className="modal-content card celebration-card">
         <h2 className="text-primary text-center">Foco Concluído! 🎉</h2>
         <div style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'var(--text-muted)' }}>
           <p>Tarefa: <strong>{task}</strong></p>

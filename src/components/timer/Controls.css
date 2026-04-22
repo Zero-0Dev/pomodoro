@@ -57,6 +57,15 @@
   transform: scale(1.05);
 }
 
+.skip, .reset {
+  background-color: var(--panel-light);
+  color: var(--text);
+}
+.skip:hover, .reset:hover {
+  background-color: var(--border);
+  transform: scale(1.05);
+}
+
 .secondary-actions {
   display: flex;
   gap: 1rem;

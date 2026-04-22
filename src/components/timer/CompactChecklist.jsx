@@ -35,9 +35,15 @@ export default function CompactChecklist({ isRunning, mode }) {
   if (isRunning && mode === 'focus') {
     if (!activeTask) return null;
     return (
-      <div style={{ marginTop: '2rem', width: '100%', background: 'var(--panel)', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--primary)', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: 'var(--border-glow)' }}>
-        <Play size={18} color="var(--primary)" />
-        <span style={{ color: 'var(--text)', fontWeight: 600, textShadow: '0 0 5px rgba(224, 240, 255, 0.5)' }}>Foco Atual: {activeTask.text}</span>
+      <div style={{ marginTop: '2rem', width: '100%', background: 'var(--panel)', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--primary)', display: 'flex', flexDirection: 'column', gap: '0.75rem', boxShadow: 'var(--border-glow)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Play size={18} color="var(--primary)" />
+          <span style={{ color: 'var(--text)', fontWeight: 600, textShadow: '0 0 5px rgba(224, 240, 255, 0.5)' }}>Foco Atual: {activeTask.text}</span>
+        </div>
+        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          <span>🍅 {activeTask.pomodorosCount || 0} Pomodoros</span>
+          <span>⏱️ {Math.floor((activeTask.totalTimeSpent || 0) / 60)} min</span>
+        </div>
       </div>
     );
   }
@@ -76,22 +82,28 @@ export default function CompactChecklist({ isRunning, mode }) {
         {activeTask && (
           <div style={{
             display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
+            flexDirection: 'column',
+            gap: '0.5rem',
             padding: '0.8rem',
             background: 'var(--panel-light)',
             border: '1px solid var(--primary)',
             boxShadow: 'var(--border-glow)',
             borderRadius: 'var(--radius)'
           }}>
-            <Play size={16} fill="var(--primary)" color="var(--primary)" />
-            <span style={{ flex: 1, color: 'var(--text)', fontWeight: 600 }}>{activeTask.text}</span>
-            <button 
-              onClick={() => updateTask(activeTask.id, { status: 'completed' })}
-              style={{ padding: 0 }}
-            >
-              <Circle color="var(--text-muted)" size={20} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Play size={16} fill="var(--primary)" color="var(--primary)" />
+              <span style={{ flex: 1, color: 'var(--text)', fontWeight: 600 }}>{activeTask.text}</span>
+              <button 
+                onClick={() => updateTask(activeTask.id, { status: 'completed' })}
+                style={{ padding: 0 }}
+              >
+                <Circle color="var(--text-muted)" size={20} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              <span>🍅 {activeTask.pomodorosCount || 0}</span>
+              <span>⏱️ {Math.floor((activeTask.totalTimeSpent || 0) / 60)} min</span>
+            </div>
           </div>
         )}
         

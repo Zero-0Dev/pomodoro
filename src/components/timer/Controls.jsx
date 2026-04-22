@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square, Plus, Minus, PictureInPicture } from 'lucide-react';
+import { Play, Pause, Square, Plus, Minus, PictureInPicture, SkipForward, RotateCcw } from 'lucide-react';
 import './Controls.css';
 
 export default function Controls({ 
@@ -10,6 +10,8 @@ export default function Controls({
   resumeTimer,
   stopTimer, 
   addTime,
+  skipCurrentMode,
+  resetTimer,
   mode,
   isPipSupported,
   togglePip,
@@ -35,6 +37,22 @@ export default function Controls({
           title="Parar sessão"
         >
           <Square size={24} />
+        </button>
+
+        <button 
+          className="btn btn-action skip" 
+          onClick={skipCurrentMode}
+          title="Pular"
+        >
+          <SkipForward size={24} />
+        </button>
+
+        <button 
+          className="btn btn-action reset" 
+          onClick={resetTimer}
+          title="Reiniciar tempo"
+        >
+          <RotateCcw size={24} />
         </button>
       </div>
 
