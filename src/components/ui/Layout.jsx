@@ -46,10 +46,11 @@ export default function Layout({ children, onNavigate, currentTab }) {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
+          alignItems: currentTab === 'flowboard' ? 'stretch' : 'center',
           justifyContent: 'flex-start',
-          padding: '2rem 1.5rem',
-          overflowY: 'auto'
+          padding: currentTab === 'flowboard' ? '1.25rem 1.5rem' : '2rem 1.5rem',
+          overflowY: currentTab === 'flowboard' ? 'hidden' : 'auto',
+          overflow: currentTab === 'flowboard' ? 'hidden' : undefined,
         }}>
           {children}
         </main>

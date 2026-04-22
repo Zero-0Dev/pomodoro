@@ -8,6 +8,7 @@ import Dashboard from './components/charts/Dashboard';
 import CategoriesManager from './components/settings/CategoriesManager';
 import Settings from './components/settings/Settings';
 import TasksManager from './components/tasks/TasksManager';
+import FlowBoard from './components/flowboard/FlowBoard';
 import './app.css';
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
     switch(currentTab) {
       case 'timer': return <PomodoroDashboard />;
       case 'tasks': return <TasksManager />;
+      case 'flowboard': return <FlowBoard />;
       case 'history': return <HistoryTable />;
       case 'charts': return <Dashboard />;
       case 'categories': return <CategoriesManager />;

@@ -152,4 +152,33 @@ Data adicionada: 2026-04-08
 
 ---
 
+## 💡 Ideias de Expansão
+
+### [IMPLEMENTADO] Flow de Ideias (Thought Flow Board)
+Data adicionada: 2026-04-22
+
+- Problema: Falta um espaço visual para capturar e organizar pensamentos livres durante sessões de foco.
+- Objetivo: Criar um quadro visual interativo onde o usuário possa organizar pensamentos em blocos arrastáveis.
+- Funcionalidades implementadas:
+  - Aba dedicada "Flow Board" na navegação lateral
+  - Criar blocos de ideias com texto editável inline
+  - Arrastar blocos livremente pelo canvas com mouse drag-and-drop nativo
+  - Grade visual opcional (ativável/desativável)
+  - Persistência completa via localStorage (`pomodoro_flow_nodes`)
+  - Botão "Converter em tarefa" — cria tarefa no sistema e vincula ao bloco
+  - Bloco exibe badge verde quando vinculado a uma tarefa
+  - Botão de excluir bloco individual
+  - Botão de limpar todos os blocos
+  - Visual dark Cyberpunk consistente com o restante do app
+- Componentes criados:
+  - `FlowBoard.jsx` — Canvas principal com lógica de drag e persistência
+  - `FlowNode.jsx` — Bloco individual arrastável
+  - `FlowToolbar.jsx` — Barra de ações superior
+  - `FlowBoard.css` — Estilos Cyberpunk dedicados
+- Prioridade: Média
+- Observações: Implementado sem React Flow para manter o bundle enxuto. Drag via mouse events nativos do browser.
+
+---
+
 *Nota: As implementações críticas de Estado (Ciclo 1) e Tema/Comportamentos Urgentes (Ciclo 2) estão concluídas e integradas.*
+

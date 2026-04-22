@@ -1,11 +1,12 @@
 import React from 'react';
-import { Timer, BarChart2, History, Settings, X, Tag, CheckSquare } from 'lucide-react';
+import { Timer, BarChart2, History, Settings, X, Tag, CheckSquare, Layers } from 'lucide-react';
 import './Sidebar.css';
 
 export default function Sidebar({ isOpen, onClose, onNavigate, currentTab }) {
   const navItems = [
     { id: 'timer', label: 'Pomodoro', icon: <Timer size={20}/> },
     { id: 'tasks', label: 'Tarefas', icon: <CheckSquare size={20}/> },
+    { id: 'flowboard', label: 'Flow Board', icon: <Layers size={20}/> },
     { id: 'charts', label: 'Estatísticas', icon: <BarChart2 size={20}/> },
     { id: 'history', label: 'Histórico', icon: <History size={20}/> },
     { id: 'categories', label: 'Categorias', icon: <Tag size={20}/> },
